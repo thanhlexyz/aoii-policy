@@ -46,6 +46,33 @@ ablation:
 	wait
 	$(PY) main.py --scenario=stat_ablation
 
+# ---------------- round-3 protocol checks ----------------
+# causal normalization: scale from the first 10% of the run only
+causal:
+	$(foreach d,$(DATASETS),$(foreach s,$(SOLVERS),$(foreach k,$(SEEDS),\
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --causal_norm=0.1 --tag=_causal $(THRESH_$(d)) & ))) wait
+
+# learners frozen after 40% of the run: time-separated evaluation
+frozen:
+	$(foreach d,$(DATASETS),$(foreach s,grid vhct,$(foreach k,$(SEEDS),\
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --freeze_after=0.4 --tag=_frozen & ))) wait
+
+# sensitivity over epsilon, alpha, K, L, and a later time block (two seeds)
+ROB_SEEDS ?= 0 1
+robustness:
+	$(foreach d,$(DATASETS),$(foreach s,$(SOLVERS),$(foreach k,$(ROB_SEEDS),\
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --error_threshold=0.005 --tag=_eps0.005 $(THRESH_$(d)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --error_threshold=0.02 --tag=_eps0.02 $(THRESH_$(d)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --alpha=0.5 --tag=_alpha0.5 $(THRESH_$(d)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --alpha=2 --tag=_alpha2 $(THRESH_$(d)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --n_device=20 --tag=_K20 $(THRESH_$(d)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --n_device=40 --tag=_K40 $(THRESH_$(d)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --avg_n_irsa_replica=3 --tag=_L3 $(THRESH_$(d)) & ))) wait
+	$(foreach s,$(SOLVERS),$(foreach k,$(ROB_SEEDS),\
+	  $(RUN) --scenario=solve --dataset=berkeley --solver=$(s) --seed=$(k) --start_slot=1500 --tag=_t1500 $(THRESH_berkeley) & \
+	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --start_slot=100000 --tag=_t100000 $(THRESH_sindit) & )) wait
+	$(PY) main.py --scenario=stat_robustness
+
 # ---------------- robustness across sensor populations ----------------
 # three disjoint 30-stream subsets per trace (every stream live through the run)
 SUBSET_SEEDS ?= 0 1
@@ -79,6 +106,9 @@ example_sensor:
 	$(PY) main.py --scenario=plot_example_sensor --dataset=bts
 
 # ---------------- over the air ----------------
+THRESH_berkeley ?= --threshold_tau=0.5 --threshold_rho=1
+THRESH_bts      ?= --threshold_tau=2 --threshold_rho=0.5
+THRESH_sindit   ?= --threshold_tau=2 --threshold_rho=0.5
 PI      ?= pi5
 PI_DIR  ?= ~/aoii-dataset
 PI_PY   ?= ~/venv/bin/python

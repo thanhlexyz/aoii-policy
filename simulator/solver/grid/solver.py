@@ -40,7 +40,8 @@ class Solver(Hybrid):
         mismatch   = torch.abs(env.X - self.X_hat_hat) > args.error_threshold
         self.event = mismatch if args.grid_reactive else torch.zeros_like(mismatch)
         # like vhct, never gated by the fixed load budget
-        if env.global_step % args.round_interval == 0:
+        frozen = args.freeze_after > 0 and env.global_step >= args.freeze_after * args.n_step
+        if env.global_step % args.round_interval == 0 and not frozen:
             self.pull()
         return torch.logical_or(self.event, torch.rand(args.n_device) < self.p_send_learned)
 
@@ -52,6 +53,8 @@ class Solver(Hybrid):
         self.cumulative_aoii   += err * env.age
         self.cumulative_active += env.active
         if env.global_step % args.round_interval:
+            return
+        if args.freeze_after > 0 and env.global_step > args.freeze_after * args.n_step:
             return
         # per-slot reward of eq. (3), fed back at the end of the round
         reward = -(self.cumulative_aoii + args.alpha * self.cumulative_active) / args.round_interval

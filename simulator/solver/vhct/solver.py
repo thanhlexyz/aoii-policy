@@ -65,10 +65,15 @@ class Solver(BaseSolver):
         self.event     = torch.zeros(args.n_device, dtype=torch.bool)
         self.n_event   = torch.zeros(args.n_device)
         self.n_total   = 0
-        # what the model descriptor is estimated from, per device
-        self.sum_delta  = torch.zeros(args.n_device)
-        self.n_attempt  = torch.zeros(args.n_device)
-        self.n_success  = torch.zeros(args.n_device)
+        # what the model descriptor is estimated from, per device. Delivery
+        # counts reach the device only in the batch feedback: the base station
+        # reports how many of the round's transmissions it decoded, never which
+        self.sum_delta      = torch.zeros(args.n_device)
+        self.n_attempt      = torch.zeros(args.n_device)
+        self.n_success      = torch.zeros(args.n_device)
+        self.round_attempt  = torch.zeros(args.n_device)
+        self.round_success  = torch.zeros(args.n_device)
+        self.frozen         = False
         # per-round bandit feedback
         self.cumulative_aoii   = torch.zeros(args.n_device)
         self.cumulative_active = torch.zeros(args.n_device)
@@ -119,7 +124,8 @@ class Solver(BaseSolver):
         # uses: deciding how much airtime to add on top of the trigger is its
         # job, and the alpha term of the reward is what charges it for that
         # pull one arm per device at the start of each learning round
-        if env.global_step % args.round_interval == 0:
+        self.frozen = args.freeze_after > 0 and env.global_step >= args.freeze_after * args.n_step
+        if env.global_step % args.round_interval == 0 and not self.frozen:
             self.set_descriptor()
             pulls = [bandit.pull(self.round) for bandit in self.bandits]
             self.p_send_learned = torch.tensor(pulls).reshape(args.n_device)
@@ -130,9 +136,10 @@ class Solver(BaseSolver):
         args   = self.args
         env    = self.env
         active = env.active
-        # the delivery rate the base station reports in its batch feedback
-        self.n_attempt += active
-        self.n_success += env.success
+        # the base station counts this round's deliveries; the device sees the
+        # count only when the round's feedback arrives
+        self.round_attempt += active
+        self.round_success += env.success
         # update the device-side replica of the server estimate
         self.X_hat_hat[active] = env.X[active]
         # accumulate this round's reward. The device cannot see the server
@@ -142,6 +149,13 @@ class Solver(BaseSolver):
         self.cumulative_aoii   += err * env.age
         self.cumulative_active += active
         if env.global_step % args.round_interval:
+            return
+        # batch feedback: per device, the round's mean aoii (inside the reward)
+        # and its delivered count
+        self.n_attempt += self.round_attempt; self.round_attempt[...] = 0
+        self.n_success += self.round_success; self.round_success[...] = 0
+        if self.frozen:
+            self.cumulative_aoii[...] = 0; self.cumulative_active[...] = 0
             return
         # per-slot reward of eq. (3)
         reward = -(self.cumulative_aoii + args.alpha * self.cumulative_active) / args.round_interval

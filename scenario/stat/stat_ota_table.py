@@ -66,7 +66,7 @@ def stat_ota_table(args):
         \centering
         \caption{''' + ', '.join(b[0] for b in blocks) + r''' : delivery and reward (rank) per channel. Ideal, software: five seeds; radio: three seeds, 2000 slots.}
         \label{tab:ota}
-        \setlength{\tabcolsep}{3pt}
+        \setlength{\tabcolsep}{3pt}\scriptsize
         \begin{tabular}{lrrrrrr}
             \toprule
             & \multicolumn{3}{c}{Delivery} & \multicolumn{3}{c}{Reward (rank)} \\

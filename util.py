@@ -62,6 +62,13 @@ def get_args():
     # device k replays stream (k + stream_offset) mod stream count; changing
     # the offset resamples the sensor population
     parser.add_argument('--stream_offset', type=int, default=0)
+    # causal normalization: per-stream min/max from the first fraction of the
+    # run only, then frozen (0 = hindsight normalization over the whole trace)
+    parser.add_argument('--causal_norm', type=float, default=0.0)
+    # replay a later time block: slot 0 of the run is this slot of the trace
+    parser.add_argument('--start_slot', type=int, default=0)
+    # learners stop adapting after this fraction of the run (0 = never)
+    parser.add_argument('--freeze_after', type=float, default=0.0)
     # over-the-air link
     parser.add_argument('--ota_host', type=str, default=None)
     parser.add_argument('--ota_dir', type=str, default='~/aoii-dataset')

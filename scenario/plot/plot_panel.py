@@ -89,7 +89,7 @@ def plot_panel_all(args, datasets=None, solvers=None, out_dir=None):
     names = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
     with plt.rc_context(STYLE):
         fig, rows = plt.subplots(len(datasets), len(PANELS),
-                                 figsize=(COLUMN_IN, 0.72 * len(datasets) + 0.25))
+                                 figsize=(COLUMN_IN, 0.4 * len(datasets) + 0.25))
         for r, (dataset, axes) in enumerate(zip(datasets, rows)):
             for ax, (metric, label, scale) in zip(axes, PANELS):
                 args.metric = metric

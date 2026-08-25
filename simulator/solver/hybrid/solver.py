@@ -29,6 +29,8 @@ class Solver(BaseSolver):
         # transmit on error
         self.event = torch.abs(env.X - self.X_hat_hat) > args.error_threshold
         p_send = self.supplement()
+        self.info_extra = {'supplement': max(p_send, 0.0),
+                           'p_event': self.n_event / self.n_total if self.n_total else 0.0}
         if p_send <= 0:
             # the event traffic alone already fills the target load
             return self.event

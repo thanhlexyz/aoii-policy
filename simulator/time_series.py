@@ -16,17 +16,31 @@ class TimeSeries:
         N    = len(pd.read_csv(os.path.join(d, 'index.csv')))
         self.stream = (i + args.stream_offset) % N
         df   = pd.read_csv(os.path.join(d, f'{self.stream}.csv'))
-        # zero-base the timestamp against the dataset-wide first reading
+        # zero-base the timestamp against the dataset-wide first reading, then
+        # shift so that slot 0 of the run is start_slot of the trace
         min_timestamp = float(open(os.path.join(d, 'min_timestamp.txt')).read())
-        self.timestamp = df['timestamp'].to_numpy() - min_timestamp
-        # min-max scale the value; a constant sensor carries no information
-        value     = df['value'].to_numpy(dtype=np.float64)
-        min_value = value.min()
-        max_value = value.max()
-        if min_value == max_value:
-            self.value = np.ones_like(value)
+        self.timestamp = (df['timestamp'].to_numpy() - min_timestamp
+                          - args.start_slot * args.slot_interval)
+        # min-max scale the value. Hindsight scaling uses the whole trace; the
+        # causal variant uses only readings inside the calibration window at
+        # the start of the run and freezes the scale, so later values may leave
+        # [0, 1]. A constant stream carries no information.
+        value = df['value'].to_numpy(dtype=np.float64)
+        if args.causal_norm > 0:
+            horizon = args.causal_norm * args.n_step * args.slot_interval
+            seen = value[(self.timestamp >= 0) & (self.timestamp < horizon)]
+            seen = seen if len(seen) else value[:1]
+            min_value, max_value = seen.min(), seen.max()
         else:
+            min_value, max_value = value.min(), value.max()
+        if max_value > min_value:
             self.value = (value - min_value) / (max_value - min_value)
+        elif args.causal_norm > 0:
+            # nothing moved in calibration: fall back to the unit scale of the
+            # first reading, so a later move still registers
+            self.value = value - min_value + 1.0
+        else:
+            self.value = np.ones_like(value)
 
     def timeslot_to_timestamp(self, timeslot):
         return timeslot * self.args.slot_interval
