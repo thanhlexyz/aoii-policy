@@ -9,22 +9,32 @@ MAX_DEPTH = 10
 RHO       = 0.5   # a binary partition halves the node width at every depth
 
 def aoii_model(x, p_event, p_correct, p_loss, delta):
-    """Mean AoII per slot for the two-state chain of Sec. IV: the estimate goes
-    wrong with probability p_event per slot and is repaired with probability
-    r = p_correct + a(x)(1 - p_loss), where a(x) is the probability the device
-    transmits in a slot under the event trigger plus a random supplement x.
-    Within a wrong sojourn of geometric length, linear age at penalty delta
-    accumulates delta * W(W+1)/2, which per slot averages to delta / r."""
-    a = p_event + (1 - p_event) * x
-    r = max(p_correct + a * (1 - p_loss), 1e-6)
-    return delta * p_event / (r * (p_event + r))
+    """Mean AoII per slot for the two-state chain of Sec. IV, under the
+    within-slot order source move -> trigger -> transmit -> decode -> estimate.
+
+    Correct -> wrong: the source moves (p_event) and the packet the move
+    triggers is lost (p_loss), so p_event * p_loss.
+    Wrong -> correct, any of three independent repairs in a slot: the source
+    returns within epsilon on its own (p_correct); the random supplement x
+    fires and is delivered; the source moves again, which re-fires the
+    trigger, and that packet is delivered. r is their union.
+    A wrong sojourn is geometric with mean 1/r; linear age at penalty delta
+    accumulates delta * W(W+1)/2 in it, which per slot of a renewal cycle of
+    mean 1/r + 1/(p_event p_loss) gives the expression below."""
+    q_random  = x * (1 - p_loss)
+    q_trigger = p_event * (1 - p_loss)
+    r = 1 - (1 - p_correct) * (1 - q_random) * (1 - q_trigger)
+    r = max(r, 1e-6)
+    breaks = p_event * p_loss
+    return delta * breaks / (r * (breaks + r))
 
 def model_nu(args, p_event, p_loss, delta):
     """Resolution descriptor from the model. Both reward terms are monotone in
-    x -- AoII falls and airtime rises -- so the reward variation over a node is
-    the difference of the two terms' values at its endpoints. The steepest
-    node at each depth is the one at x = 0; nu is the smallest constant whose
-    nu * rho^h dominates that variation at every depth up to MAX_DEPTH."""
+    x -- r rises with x so AoII falls, and airtime a = p_E + (1-p_E) x rises
+    -- so the reward variation over a node is the difference of the two
+    terms' values at its endpoints. The steepest node at each depth is the
+    one at x = 0; nu is the smallest constant whose nu * rho^h dominates that
+    variation at every depth up to MAX_DEPTH."""
     x_bar = args.p_send
     nu = 0.0
     for h in range(MAX_DEPTH + 1):

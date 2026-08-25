@@ -16,8 +16,11 @@ def stat_ablation(args):
     """What the two ingredients of the proposed policy buy, each on its own."""
     rows = []
     for dataset in util.DATASETS:
-        for tag, label in VARIANTS.items():
-            pattern = os.path.join(args.csv_dir, args.mode, f'{dataset}_vhct{tag}_s[0-9]*.csv')
+        for tag, label in list(VARIANTS.items()) + [('_grid', 'grid-UCB + event trigger (adaptive hybrid)'),
+                                                    ('_grid_norx', 'grid-UCB, no trigger (adaptive random)')]:
+            solver = 'grid' if tag.startswith('_grid') else 'vhct'
+            tag    = tag[5:] if tag.startswith('_grid') else tag
+            pattern = os.path.join(args.csv_dir, args.mode, f'{dataset}_{solver}{tag}_s[0-9]*.csv')
             for path in sorted(glob.glob(pattern)):
                 seed = int(path.rsplit('_s', 1)[1].split('.')[0])
                 df   = pd.read_csv(path)

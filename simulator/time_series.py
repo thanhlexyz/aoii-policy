@@ -14,7 +14,8 @@ class TimeSeries:
         # exceeds the trace count
         d    = os.path.join(args.data_dir, args.dataset)
         N    = len(pd.read_csv(os.path.join(d, 'index.csv')))
-        df   = pd.read_csv(os.path.join(d, f'{i % N}.csv'))
+        self.stream = (i + args.stream_offset) % N
+        df   = pd.read_csv(os.path.join(d, f'{self.stream}.csv'))
         # zero-base the timestamp against the dataset-wide first reading
         min_timestamp = float(open(os.path.join(d, 'min_timestamp.txt')).read())
         self.timestamp = df['timestamp'].to_numpy() - min_timestamp

@@ -1,3 +1,5 @@
+from .stat_subsets import stat_subsets
+from .stat_coverage import stat_coverage
 from .stat_ota_table import stat_ota_table
 from .stat_threshold import stat_threshold
 from .stat_ablation import stat_ablation

@@ -50,6 +50,7 @@ def get_args():
     parser.add_argument('--threshold_rho', type=float, default=1.0)
     # grid learner: ucb1 over this many equispaced arms on [0, p_send]
     parser.add_argument('--n_grid_arm', type=int, default=8)
+    parser.add_argument('--grid_reactive', type=int, default=1, choices=[0, 1])
     # vhct ablations: which resolution descriptor, and whether the learned
     # probability rides on top of event-triggered transmissions
     parser.add_argument('--vhct_descriptor', type=str, default='model', choices=['generic', 'model'])
@@ -58,6 +59,9 @@ def get_args():
     # dataset
     parser.add_argument('--dataset', type=str, default='berkeley', choices=DATASETS)
     parser.add_argument('--slot_interval', type=float, default=None) # second
+    # device k replays stream (k + stream_offset) mod stream count; changing
+    # the offset resamples the sensor population
+    parser.add_argument('--stream_offset', type=int, default=0)
     # over-the-air link
     parser.add_argument('--ota_host', type=str, default=None)
     parser.add_argument('--ota_dir', type=str, default='~/aoii-dataset')

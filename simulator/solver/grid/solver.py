@@ -37,7 +37,8 @@ class Solver(Hybrid):
     def select_action(self, observation):
         args = self.args
         env  = self.env
-        self.event = torch.abs(env.X - self.X_hat_hat) > args.error_threshold
+        mismatch   = torch.abs(env.X - self.X_hat_hat) > args.error_threshold
+        self.event = mismatch if args.grid_reactive else torch.zeros_like(mismatch)
         # like vhct, never gated by the fixed load budget
         if env.global_step % args.round_interval == 0:
             self.pull()

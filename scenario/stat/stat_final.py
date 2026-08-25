@@ -38,6 +38,7 @@ def stat_final(args):
     agg = (df.groupby(['dataset', 'solver'], sort=False)
              .agg(n_seed=('seed', 'count'), n_step=('n_step', 'max'),
                   avg_aoii=('avg_aoii', 'mean'), avg_aoii_std=('avg_aoii', 'std'),
+                  avg_aoii_median=('avg_aoii', 'median'), avg_aoii_max=('avg_aoii', 'max'),
                   utilization=('utilization', 'mean'), utilization_std=('utilization', 'std'),
                   p_success=('p_success', 'mean'),
                   reward=('reward', 'mean'), reward_std=('reward', 'std'))

@@ -41,9 +41,22 @@ ablation:
 	$(foreach d,$(DATASETS),$(foreach k,$(SEEDS),\
 	  $(RUN) --scenario=solve --dataset=$(d) --solver=vhct --seed=$(k) --vhct_descriptor=generic --tag=_generic & \
 	  $(RUN) --scenario=solve --dataset=$(d) --solver=vhct --seed=$(k) --vhct_reactive=0 --tag=_norx & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=vhct --seed=$(k) --vhct_descriptor=generic --vhct_reactive=0 --tag=_generic_norx & )) \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=vhct --seed=$(k) --vhct_descriptor=generic --vhct_reactive=0 --tag=_generic_norx & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=grid --seed=$(k) --grid_reactive=0 --tag=_norx & )) \
 	wait
 	$(PY) main.py --scenario=stat_ablation
+
+# ---------------- robustness across sensor populations ----------------
+# three disjoint 30-stream subsets per trace (every stream live through the run)
+SUBSET_SEEDS ?= 0 1
+subsets:
+	$(foreach o,0 30 60,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
+	  $(RUN) --scenario=solve --dataset=berkeley --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_berkeley) & ))) wait
+	$(foreach o,0 150 180,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
+	  $(RUN) --scenario=solve --dataset=bts --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_bts) & ))) wait
+	$(foreach o,0 10 20,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
+	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_sindit) & ))) wait
+	$(PY) main.py --scenario=stat_subsets
 
 # ---------------- threshold baseline: offline sweep of (tau, rho) ----------------
 TAUS ?= 0.02 0.1 0.5 2

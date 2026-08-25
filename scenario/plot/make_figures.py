@@ -1,7 +1,7 @@
 import os
 
 from .plot_line_v2 import plot_line_v2
-from .plot_panel import plot_panel
+from .plot_panel import plot_panel, plot_panel_all
 from .plot_line import plot_line
 
 DATASETS = ['berkeley', 'bts', 'sindit']
@@ -19,6 +19,7 @@ def make_figures(args):
     for dataset in DATASETS:
         print('[+] ' + plot_panel(args, dataset, out_dir=out_dir))
         n += 1
+    print('[+] ' + plot_panel_all(args, out_dir=out_dir)); n += 1
     for metric in METRICS:
         args.metric = metric
         for solvers in SOLVER_SETS:

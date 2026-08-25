@@ -78,3 +78,57 @@ def plot_panel(args, dataset, solvers=None, out_dir=None):
         fig.savefig(path)
         plt.close(fig)
     return path
+
+
+def plot_panel_all(args, datasets=None, solvers=None, out_dir=None):
+    """All traces in one figure: one row per dataset, the same three panels,
+    one legend. Replaces the per-dataset figures in the paper."""
+    datasets = datasets or ['berkeley', 'bts', 'sindit']
+    solvers  = solvers  or ['reactive', 'random', 'hybrid', 'threshold', 'grid', 'vhct']
+    out_dir  = out_dir  or args.figure_dir
+    names = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
+    with plt.rc_context(STYLE):
+        fig, rows = plt.subplots(len(datasets), len(PANELS),
+                                 figsize=(COLUMN_IN, 0.72 * len(datasets) + 0.25))
+        for r, (dataset, axes) in enumerate(zip(datasets, rows)):
+            for ax, (metric, label, scale) in zip(axes, PANELS):
+                args.metric = metric
+                for solver in solvers:
+                    x, y, sd = common.load(args, dataset, solver)
+                    lo, hi = y - sd, y + sd
+                    if scale != 'symlog':
+                        lo = np.maximum(lo, FLOOR if scale == 'log' else 0.0)
+                        y  = np.maximum(y, FLOOR if scale == 'log' else 0.0)
+                    line, = ax.plot(x, y, label=common.SOLVER_LABEL[solver])
+                    ax.fill_between(x, lo, hi, color=line.get_color(), alpha=0.15, lw=0)
+                if scale == 'log':
+                    ax.set_yscale('log')
+                    ax.yaxis.set_major_locator(mticker.LogLocator(numticks=4))
+                    ax.yaxis.set_minor_locator(mticker.NullLocator())
+                elif scale == 'symlog':
+                    ax.set_yscale('symlog', linthresh=1e-1)
+                    lo_, hi_ = ax.get_ylim(); ticks = [0.0]; k = -1
+                    while -10.0 ** k > lo_:
+                        ticks.append(-10.0 ** k); k += 2
+                    ax.set_yticks(sorted(ticks))
+                    ax.yaxis.set_minor_locator(mticker.NullLocator())
+                else:
+                    ax.locator_params(axis='y', nbins=3)
+                if r == 0:
+                    ax.set_title(label, pad=2)
+                if r == len(datasets) - 1:
+                    ax.set_xlabel('Slot', labelpad=1)
+                ax.margins(x=0.02)
+                ax.xaxis.set_major_formatter(mticker.FuncFormatter(thousands))
+                ax.locator_params(axis='x', nbins=3)
+            axes[0].set_ylabel(names[dataset], labelpad=2)
+        handles, labels = rows[0][0].get_legend_handles_labels()
+        fig.legend(handles, labels, ncol=len(solvers), loc='upper center',
+                   bbox_to_anchor=(0.5, 1.015), columnspacing=0.8,
+                   handlelength=1.2, handletextpad=0.4)
+        fig.tight_layout(rect=(0, 0, 1, 0.94), pad=0.2, w_pad=0.5, h_pad=0.4)
+        os.makedirs(out_dir, exist_ok=True)
+        path = os.path.join(out_dir, 'plot_panel_all.pdf')
+        fig.savefig(path)
+        plt.close(fig)
+    return path
