@@ -30,9 +30,11 @@ def plot_ota(args, out_dir=None, datasets=None, name='plot_ota.pdf'):
         for ax, dataset in zip(axes[:, 0], datasets):
             d = ch[(ch.dataset == dataset) & ch.solver.isin(SHOWN)]
             solvers = list(d[d.channel == 'ideal'].set_index('solver').reward.sort_values().index)
-            # the axis spans the competitive rewards; a collapsed run (below
-            # -1) is drawn at the bottom edge with its value
-            lo = 1.25 * d[d.reward > -1].reward.min()
+            # the axis spans the competitive rewards of the row, within ten
+            # times the best slot-occupancy reward; a collapsed run beyond
+            # that is drawn at the bottom edge with its value
+            floor = 10 * d[d.channel == 'ideal'].reward.max()
+            lo = 1.25 * d[d.reward > floor].reward.min()
             ax.set_ylim(lo, 0.08 * abs(lo))
             for k, solver in enumerate(solvers):
                 color = common.SOLVER_STYLE[solver]['color']
@@ -47,7 +49,7 @@ def plot_ota(args, out_dir=None, datasets=None, name='plot_ota.pdf'):
                         ax.annotate(f'${r:.0f}\\pm{sd:.0f}$', (k + dx, lo), xytext=(0, 4 + 7 * j), textcoords='offset points',
                                     ha='center', va='bottom', fontsize=4.5, color=color)
                         continue
-                    ax.errorbar(k + dx, r, yerr=sd, color=color, lw=0.6, capsize=1.2,
+                    ax.errorbar(k + dx, r, yerr=[[sd], [min(sd, -r)]], color=color, lw=0.6, capsize=1.2,
                                 marker=marker, ms=4.5 if ours else 3.5, mfc=color if filled else 'white', mew=0.9,
                                 ls='none', zorder=3 if ours else 2)
                 if ours:

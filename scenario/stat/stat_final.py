@@ -99,10 +99,26 @@ def main_table(agg, df, args):
                     cell += r'$^{\dagger}$'
             cells.append(cell)
         rows.append(f'      {LABEL[solver]} & ' + ' & '.join(cells) + r' \\')
+    # the objective: the reward gain of the proposed policy over the best
+    # baseline, starred when the Welch test against that baseline is below
+    # ALPHA / (number of baselines)
+    if 'mpgts' in aoii.index:
+        gains = []
+        for dataset in datasets:
+            d = df[df.dataset == dataset]
+            means = d[d.solver != 'mpgts'].groupby('solver').reward.mean()
+            best = means.idxmax()
+            v, o = d[d.solver == 'mpgts'].reward, d[d.solver == best].reward
+            gain = (v.mean() - means[best]) / abs(means[best]) * 100
+            star = r'$^{*}$' if len(v) > 1 and len(o) > 1 and \
+                stats.ttest_ind(v, o, equal_var=False).pvalue < ALPHA / len(means) else ''
+            gains.append(f'{gain:+.0f}\\%{star}')
+        rows.append(r'      \midrule')
+        rows.append(r'      \textit{reward gain} & ' + ' & '.join(gains) + r' \\')
     tex = r"""\newcommand{\maintable}{%
   \begin{table}[t]
     \centering
-    \caption{Steady-state AoII per policy, sorted from worst to best (mean $\pm$ standard deviation over """ + seeds_in_words(df) + r""" seeds on the final 1000 slots; best in bold, $\dagger$: differs from the runner-up at $p < """ + f'{ALPHA:g}' + r""" $, Welch's $t$-test).}
+    \caption{Steady-state AoII per policy, sorted from worst to best (mean $\pm$ standard deviation over """ + seeds_in_words(df) + r""" seeds on the final 1000 slots; best in bold, $\dagger$: differs from the runner-up at $p < """ + f'{ALPHA:g}' + r""" $, Welch's $t$-test); last row: reward gain of \tool over the best baseline, $*$: significant at the Bonferroni level.}
     \label{tab:main}
     \setlength{\tabcolsep}{1pt}\scriptsize
     \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}l""" + 'r' * len(datasets) + r"""@{}}
