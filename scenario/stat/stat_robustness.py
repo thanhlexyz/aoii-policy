@@ -6,55 +6,60 @@ import util
 
 from .stat_final import tail_metrics
 
-# tag -> label, in the order the table lists them
-CONFIGS = [('', 'reference'), ('_causal', 'causal scaling'), ('_eps0.005', r'$\epsilon = 0.005$'),
-           ('_eps0.02', r'$\epsilon = 0.02$'), ('_alpha0.5', r'$\alpha = 0.5$'), ('_alpha2', r'$\alpha = 2$'),
+# tag -> label, in the order the figure lists them. Every policy is replayed
+# under each variation (two seeds, five for the reference); the sensor subsets
+# and the protocol checks (causal scaling, frozen learners) join the list.
+CONFIGS = [('', 'reference'), ('_causal', 'causal scaling'), ('_frozen', 'frozen at 40\\%'),
+           ('_eps0.005', r'$\epsilon = 0.005$'), ('_eps0.02', r'$\epsilon = 0.02$'),
+           ('_alpha0.5', r'$\alpha = 0.5$'), ('_alpha2', r'$\alpha = 2$'),
            ('_K20', '$K = 20$'), ('_K40', '$K = 40$'), ('_L3', '$L = 3$'),
            ('_t1500', 'later block'), ('_t100000', 'later block')]
+SUBSETS  = {'berkeley': [30, 60], 'bts': [150, 180], 'sindit': [10, 20]}
 LOCAL    = ['reactive', 'threshold']
-LEARNERS = ['grid', 'vhct']
+PROPOSED = 'repair'
 
 def load_config(args, dataset, tag):
     rows = []
     for solver in util.SOLVERS:
         for path in sorted(glob.glob(os.path.join(args.csv_dir, args.mode, f'{dataset}_{solver}{tag}_s[0-9]*.csv'))):
-            # K changes the slot count of the reference table: read M from args, K is in the run
-            m = tail_metrics(path, args.n_irsa_slot)
-            rows.append({'solver': solver, **m})
+            rows.append({'solver': solver, **tail_metrics(path, args.n_irsa_slot)})
     return pd.DataFrame(rows)
 
 def summarize(df):
-    """The two numbers each robustness claim rests on: how far the local-record
-    policies sit above the best learner's AoII (collapse factor), and the best
-    learner's reward relative to the throughput rule's (ratio > 1 = better)."""
+    """What each robustness claim rests on: the proposed policy's reward
+    against the best baseline's (gain > 0 means it is best), its rank, and
+    how far the local-record policies sit above its AoII (collapse factor)."""
     g = df.groupby('solver').mean(numeric_only=True)
-    if not set(LOCAL + LEARNERS + ['random']) <= set(g.index):
+    if PROPOSED not in g.index or len(g) < 2:
         return None
-    best_learner_aoii = g.loc[LEARNERS, 'avg_aoii'].min()
-    collapse = g.loc[LOCAL, 'avg_aoii'].min() / max(best_learner_aoii, 1e-6)
-    ratio = g.loc[LEARNERS, 'reward'].max() / g.loc['random', 'reward']
-    ranking = g['reward'].sort_values(ascending=False).index.tolist()
-    return collapse, 1 / ratio, ranking   # reward negative: learner/throughput < 1 means learner better
+    baselines = g.drop(PROPOSED)
+    best = baselines['reward'].idxmax()
+    gain = (g.loc[PROPOSED, 'reward'] - baselines.loc[best, 'reward']) / abs(baselines.loc[best, 'reward']) * 100
+    rank = int((g['reward'] > g.loc[PROPOSED, 'reward']).sum() + 1)
+    local = [s for s in LOCAL if s in g.index]
+    collapse = g.loc[local, 'avg_aoii'].min() / max(g.loc[PROPOSED, 'avg_aoii'], 1e-6) if local else float('nan')
+    return {'repair_reward': g.loc[PROPOSED, 'reward'], 'best_baseline': best,
+            'best_baseline_reward': baselines.loc[best, 'reward'], 'gain': gain,
+            'rank': rank, 'n_policy': len(g), 'collapse': collapse,
+            'repair_aoii': g.loc[PROPOSED, 'avg_aoii'], 'repair_load': g.loc[PROPOSED, 'utilization']}
 
 def stat_robustness(args):
-    lines, table = [], []
-    for tag, label in CONFIGS:
-        cells = []
-        for dataset in util.DATASETS:
+    """RQ3: the proposed policy under every variation of the protocol."""
+    rows = []
+    for dataset in util.DATASETS:
+        for tag, label in CONFIGS:
             df = load_config(args, dataset, tag)
             s = summarize(df) if len(df) else None
-            if s is None:
-                cells.append('--'); continue
-            collapse, ratio, ranking = s
-            cells.append(f'{collapse:.0f}x / {ratio:.2f}')
-            lines.append(f'{label:16s} {dataset:9s} collapse={collapse:9.0f}x  learner/throughput reward ratio={ratio:.2f}  rank: ' + '>'.join(ranking))
-        if any(c != '--' for c in cells):
-            table.append((label, cells))
-    print('\n'.join(lines))
-    out = os.path.join(args.csv_dir, 'robustness.txt')
-    with open(out, 'w') as fp:
-        fp.write('\n'.join(lines))
-    print('\nTABLE (collapse factor / learner-to-throughput reward ratio):')
-    for label, cells in table:
-        print(f'  {label:18s} & ' + ' & '.join(cells) + r' \\')
-    print(f'[+] wrote {out}')
+            if s: rows.append({'dataset': dataset, 'tag': tag, 'config': label, **s})
+        for offset in SUBSETS[dataset]:
+            df = load_config(args, dataset, f'_o{offset}')
+            s = summarize(df) if len(df) else None
+            if s: rows.append({'dataset': dataset, 'tag': f'_o{offset}',
+                               'config': f'streams {offset}--{offset + args.n_device - 1}', **s})
+    if not rows:
+        print('[!] no robustness runs on disk'); return
+    out = pd.DataFrame(rows)
+    path = os.path.join(args.csv_dir, 'robustness.csv')
+    out.to_csv(path, index=None, float_format='%.6f')
+    pd.set_option('display.float_format', '{:.3f}'.format)
+    print(out.to_string(index=False)); print(f'[+] wrote {path}')

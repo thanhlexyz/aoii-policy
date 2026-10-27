@@ -2,7 +2,10 @@
 # on the Berkeley, BTS and SINDIT sensor traces.
 PY       ?= python3
 DATASETS ?= berkeley bts sindit
-SOLVERS  ?= reactive random hybrid threshold grid vhct
+SOLVERS  ?= reactive random hybrid threshold grid vhct repair
+# the proposed policy closes a feedback round every 25 slots (the per-device
+# learners keep the 100-slot round of their original protocol)
+EXTRA_repair = --round_interval=25
 RUN       = $(PY) main.py --no_progress_bar --device=cpu
 
 all: run summary plots
@@ -30,47 +33,64 @@ stat_dataset:
 SEEDS ?= 0 1 2 3 4
 run:
 	$(foreach d,$(DATASETS),$(foreach s,$(SOLVERS),$(foreach k,$(SEEDS),\
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) & ))) \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) $(EXTRA_$(s)) & ))) \
 	wait
 
 summary:
 	$(PY) main.py --scenario=stat_final
 
-# ---------------- ablation of the proposed policy ----------------
+# every csv summary and ../paper/figure table the paper quotes, then the figures
+results: summary
+	$(PY) main.py --scenario=stat_ablation
+	$(PY) main.py --scenario=stat_robustness
+	$(PY) main.py --scenario=stat_subsets
+	$(PY) main.py --scenario=stat_round_interval
+	$(PY) main.py --scenario=stat_channel
+	$(PY) main.py --scenario=stat_ota_table
+	$(PY) main.py --scenario=make_figures
+
+# ---------------- ablation of the proposed policy (RQ2) ----------------
+# what each ingredient buys: which parameters of the schedule are learned, the
+# repeats, the background, the learner and its scale, and the round length
+ABLATION = _bgonly:--repair_q_grid=0.05,--repair_n_grid=3 _qbg:--repair_n_grid=3 \
+           _fixed:--repair_learn=none,--repair_q_grid=0.05,--repair_n_grid=3,--repair_bg_grid=0.01 \
+           _nobg:--repair_bg_grid=0 _norepeat:--repair_n_grid=0 \
+           _std:--repair_scale=std _ucb:--repair_learn=cgrid _cvhct:--repair_learn=cvhct,--repair_log=1 _device:--repair_learn=grid \
+           _N100:--round_interval=100
 ablation:
-	$(foreach d,$(DATASETS),$(foreach k,$(SEEDS),\
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=vhct --seed=$(k) --vhct_descriptor=generic --tag=_generic & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=vhct --seed=$(k) --vhct_reactive=0 --tag=_norx & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=vhct --seed=$(k) --vhct_descriptor=generic --vhct_reactive=0 --tag=_generic_norx & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=grid --seed=$(k) --grid_reactive=0 --tag=_norx & )) \
+	$(foreach d,$(DATASETS),$(foreach k,$(SEEDS),$(foreach a,$(ABLATION),\
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=repair --seed=$(k) $(EXTRA_repair) \
+	         $(subst $(comma), ,$(word 2,$(subst :, ,$(a)))) --tag=$(word 1,$(subst :, ,$(a))) & ))) \
 	wait
 	$(PY) main.py --scenario=stat_ablation
+
+comma := ,
 
 # ---------------- round-3 protocol checks ----------------
 # causal normalization: scale from the first 10% of the run only
 causal:
 	$(foreach d,$(DATASETS),$(foreach s,$(SOLVERS),$(foreach k,$(SEEDS),\
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --causal_norm=0.1 --tag=_causal $(THRESH_$(d)) & ))) wait
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --causal_norm=0.1 --tag=_causal $(THRESH_$(d)) $(EXTRA_$(s)) & ))) wait
 
 # learners frozen after 40% of the run: time-separated evaluation
 frozen:
-	$(foreach d,$(DATASETS),$(foreach s,grid vhct,$(foreach k,$(SEEDS),\
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --freeze_after=0.4 --tag=_frozen & ))) wait
+	$(foreach d,$(DATASETS),$(foreach s,grid vhct repair,$(foreach k,$(SEEDS),\
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --freeze_after=0.4 --tag=_frozen $(EXTRA_$(s)) & ))) wait
 
 # sensitivity over epsilon, alpha, K, L, and a later time block (two seeds)
 ROB_SEEDS ?= 0 1
 robustness:
 	$(foreach d,$(DATASETS),$(foreach s,$(SOLVERS),$(foreach k,$(ROB_SEEDS),\
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --error_threshold=0.005 --tag=_eps0.005 $(THRESH_$(d)) & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --error_threshold=0.02 --tag=_eps0.02 $(THRESH_$(d)) & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --alpha=0.5 --tag=_alpha0.5 $(THRESH_$(d)) & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --alpha=2 --tag=_alpha2 $(THRESH_$(d)) & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --n_device=20 --tag=_K20 $(THRESH_$(d)) & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --n_device=40 --tag=_K40 $(THRESH_$(d)) & \
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --avg_n_irsa_replica=3 --tag=_L3 $(THRESH_$(d)) & ))) wait
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --error_threshold=0.005 --tag=_eps0.005 $(THRESH_$(d)) $(EXTRA_$(s)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --error_threshold=0.02 --tag=_eps0.02 $(THRESH_$(d)) $(EXTRA_$(s)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --alpha=0.5 --tag=_alpha0.5 $(THRESH_$(d)) $(EXTRA_$(s)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --alpha=2 --tag=_alpha2 $(THRESH_$(d)) $(EXTRA_$(s)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --n_device=20 --tag=_K20 $(THRESH_$(d)) $(EXTRA_$(s)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --n_device=40 --tag=_K40 $(THRESH_$(d)) $(EXTRA_$(s)) & \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --avg_n_irsa_replica=3 --tag=_L3 $(THRESH_$(d)) $(EXTRA_$(s)) & ))) wait
 	$(foreach s,$(SOLVERS),$(foreach k,$(ROB_SEEDS),\
-	  $(RUN) --scenario=solve --dataset=berkeley --solver=$(s) --seed=$(k) --start_slot=1500 --tag=_t1500 $(THRESH_berkeley) & \
-	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --start_slot=100000 --tag=_t100000 $(THRESH_sindit) & )) wait
+	  $(RUN) --scenario=solve --dataset=berkeley --solver=$(s) --seed=$(k) --start_slot=1500 --tag=_t1500 $(THRESH_berkeley) $(EXTRA_$(s)) & \
+	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --start_slot=100000 --tag=_t100000 $(THRESH_sindit) $(EXTRA_$(s)) & )) wait
 	$(PY) main.py --scenario=stat_robustness
 
 # ---------------- robustness across sensor populations ----------------
@@ -78,11 +98,11 @@ robustness:
 SUBSET_SEEDS ?= 0 1
 subsets:
 	$(foreach o,0 30 60,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
-	  $(RUN) --scenario=solve --dataset=berkeley --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_berkeley) & ))) wait
+	  $(RUN) --scenario=solve --dataset=berkeley --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_berkeley) $(EXTRA_$(s)) & ))) wait
 	$(foreach o,0 150 180,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
-	  $(RUN) --scenario=solve --dataset=bts --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_bts) & ))) wait
+	  $(RUN) --scenario=solve --dataset=bts --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_bts) $(EXTRA_$(s)) & ))) wait
 	$(foreach o,0 10 20,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
-	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_sindit) & ))) wait
+	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_sindit) $(EXTRA_$(s)) & ))) wait
 	$(PY) main.py --scenario=stat_subsets
 
 # ---------------- threshold baseline: offline sweep of (tau, rho) ----------------
@@ -116,7 +136,7 @@ PI_PY   ?= ~/venv/bin/python
 # software loopback of the whole radio path (no radios) -- run this first
 ota-sw:
 	$(foreach d,$(DATASETS),$(foreach s,$(SOLVERS),$(foreach k,$(SEEDS),\
-	  $(RUN) --scenario=solve --channel=software --dataset=$(d) --solver=$(s) --seed=$(k) --tag=_sw & ))) \
+	  $(RUN) --scenario=solve --channel=software --dataset=$(d) --solver=$(s) --seed=$(k) --tag=_sw $(EXTRA_$(s)) & ))) \
 	wait
 	$(PY) main.py --scenario=stat_channel
 
@@ -136,7 +156,7 @@ OTA_DATASETS ?= sindit berkeley
 OTA_SEEDS    ?= 0 1 2
 ota:
 	$(foreach d,$(OTA_DATASETS),$(foreach k,$(OTA_SEEDS),$(foreach s,$(SOLVERS),\
-	  $(RUN) --scenario=solve --channel=ota --dataset=$(d) --solver=$(s) --seed=$(k) --n_step=$(OTA_STEP) --tag=_ota \
+	  $(RUN) --scenario=solve --channel=ota --dataset=$(d) --solver=$(s) --seed=$(k) --n_step=$(OTA_STEP) --tag=_ota $(EXTRA_$(s)) \
 	         --ota_tx_power=$(OTA_POWER) --ota_crowd_power=$(OTA_POWER) \
 	         --ota_host=$(PI) --ota_dir=$(PI_DIR) --ota_python=$(PI_PY);)))
 	$(PY) main.py --scenario=stat_channel
@@ -150,8 +170,8 @@ clean:
 
 # ---------------- RQ4: sensitivity to the feedback round length ----------------
 ROUNDS ?= 25 50 100 200
-rq4:
+round_interval:
 	$(foreach d,$(DATASETS),$(foreach n,$(ROUNDS),$(foreach k,$(SEEDS),\
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=vhct --round_interval=$(n) --tag=_N$(n) --seed=$(k) & ))) \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=repair --round_interval=$(n) --tag=_N$(n) --seed=$(k) & ))) \
 	wait
 	$(PY) main.py --scenario=stat_round_interval

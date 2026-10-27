@@ -3,7 +3,7 @@ import torch
 import os
 
 DATASETS = ['berkeley', 'bts', 'sindit']
-SOLVERS  = ['random', 'reactive', 'hybrid', 'threshold', 'grid', 'vhct']
+SOLVERS  = ['random', 'reactive', 'hybrid', 'threshold', 'grid', 'vhct', 'repair']
 CHANNELS = ['ideal', 'software', 'ota']
 
 # Slot duration in second, set to the measured median inter-event interval of
@@ -55,6 +55,19 @@ def get_args():
     # probability rides on top of event-triggered transmissions
     parser.add_argument('--vhct_descriptor', type=str, default='model', choices=['generic', 'model'])
     parser.add_argument('--vhct_reactive', type=int, default=1, choices=[0, 1])
+    # proposed policy: the repair schedule (q, n_r, x_bg) is learned over the
+    # product of these candidate grids (a single value fixes a parameter) at
+    # the base station (cgrid, cvhct) or per device (grid, vhct), or fixed to
+    # the first value of each grid (none); repair_log searches the X-armed
+    # bandit's domain on a log scale
+    parser.add_argument('--repair_q_grid', type=str, default='0.02,0.05,0.1')
+    parser.add_argument('--repair_n_grid', type=str, default='1,3,5')
+    parser.add_argument('--repair_bg_grid', type=str, default='0,0.002,0.01,0.03')
+    parser.add_argument('--repair_learn', type=str, default='ts', choices=['none', 'ts', 'cgrid', 'cvhct', 'grid', 'vhct'])
+    parser.add_argument('--repair_log', type=int, default=0, choices=[0, 1])
+    # posterior scale of the Thompson learner: robust (median absolute
+    # deviation) or the plain standard deviation
+    parser.add_argument('--repair_scale', type=str, default='mad', choices=['mad', 'std'])
     parser.add_argument('--tag', type=str, default='')
     # dataset
     parser.add_argument('--dataset', type=str, default='berkeley', choices=DATASETS)

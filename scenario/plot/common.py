@@ -12,7 +12,7 @@ LABEL = {'avg_aoii'   : 'Average AoII',
 
 SOLVER_LABEL = {'reactive': 'reactive', 'random': 'throughput',
                 'hybrid'  : 'hybrid',   'threshold': 'threshold',
-                'grid'    : 'grid-UCB', 'vhct'  : 'VHCT'}
+                'grid'    : 'grid-UCB', 'vhct'  : 'VHCT', 'repair': 'repair (ours)'}
 
 def smooth(x, y, n_smooth):
     """Block-average into windows of n_smooth slots."""

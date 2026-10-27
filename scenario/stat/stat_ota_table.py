@@ -11,7 +11,7 @@ NAME  = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
 # the table shows the multi-seed trace; single-seed traces are stated in prose
 TABLE_DATASETS = ['sindit']
 LABEL = {'reactive': 'reactive', 'random': 'throughput', 'hybrid': 'hybrid',
-         'threshold': 'threshold', 'grid': 'grid', 'vhct': 'VHCT'}
+         'threshold': 'threshold', 'grid': 'grid', 'vhct': 'VHCT', 'repair': 'repair'}
 
 def collect(args, dataset):
     rows = []
