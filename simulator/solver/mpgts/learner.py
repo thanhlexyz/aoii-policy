@@ -3,18 +3,18 @@ import numpy as np
 import torch
 from PyXAB.algos.VHCT import VHCT
 
-# the repair schedule theta = (q, n_r, x_bg): the probability of a re-send
+# the retransmission schedule theta = (q, n_r, x_bg): the probability of a re-send
 # while the repeat budget lasts, the budget, and the background rate after it
-PARAMS = ['repair_q', 'repair_n', 'repair_bg']
+PARAMS = ['mpgts_q', 'mpgts_n', 'mpgts_bg']
 
 def grids(args):
     """The candidate values of each parameter, from the comma-separated
-    --repair_*_grid arguments; a single value fixes that parameter."""
+    --mpgts_*_grid arguments; a single value fixes that parameter."""
     return [np.array([float(v) for v in getattr(args, p + '_grid').split(',')]) for p in PARAMS]
 
 class Learner:
-    """Chooses the repair schedule of every device once per round and observes
-    the per-device reward combining AoII and airtime penalty at the end of it.
+    """Chooses the retransmission schedule of every device once per round and observes
+    the per-device reward combining AoII and transmission cost at the end of it.
     A network-mean learner (shared = True) pools rewards into their mean and
     broadcasts one schedule; a multiple-play or decentralized learner maintains
     per-device reward attribution. Freezing stops both updates and arm switches."""
@@ -46,7 +46,7 @@ class Fixed(Learner):
     """The first value of every grid, never changed: the ablation's fixed
     schedule."""
 
-class GridUCB(Learner):
+class UCB(Learner):
     """UCB1 over the log-spaced GRID with a scale-free bonus: the exploration
     term is scaled by the pooled within-arm standard deviation of the rewards
     seen so far, the noise an arm mean carries, which keeps the bonus
@@ -90,7 +90,7 @@ class GridUCB(Learner):
 class XArmed(Learner):
     """VHCT over the unit cube of the parameters whose grid spans a range, the
     X-armed alternative: an arm u in [0, 1] maps to the grid's span, on a log
-    scale with repair_log (a zero lower end maps to one thousandth of the top).
+    scale with mpgts_log (a zero lower end maps to one thousandth of the top).
     Its smoothness scale nu is set to the spread of the rewards seen so far."""
 
     def __init__(self, args, shared=True):
@@ -101,7 +101,7 @@ class XArmed(Learner):
 
     def level(self, i, u):
         lo, hi = self.grids[i].min(), self.grids[i].max()
-        if self.args.repair_log:
+        if self.args.mpgts_log:
             lo = max(lo, hi / 1000)
             return hi * (lo / hi) ** (1 - u)
         return lo + (hi - lo) * u
@@ -121,7 +121,7 @@ class XArmed(Learner):
         for b, r in zip(self.bandits, reward.tolist()):
             b.receive_reward(t, r)
 
-class Thompson(GridUCB):
+class Thompson(UCB):
     """Multiple-play Thompson sampling over the same grid: the base station
     keeps one posterior per arm (Gaussian, the pooled within-arm noise as its
     scale) and draws an arm for every device from it, so a round of K devices
@@ -136,11 +136,11 @@ class Thompson(GridUCB):
         self.residuals = []
 
     def noise(self):
-        """Robust scale of the per-device rewards: 1.4826 times the median
-        absolute deviation of the within-arm residuals. Per-device rewards are
-        a tight cluster plus the rare lockup spikes, which the standard
-        deviation would let dominate and keep every posterior wide."""
-        if self.args.repair_scale == 'std':
+        """Robust scale of per-device rewards: 1.4826 times the median absolute
+        deviation of within-arm residuals. Per-device rewards exhibit a heavy-tailed
+        distribution with outlier penalties from rare desynchronization events, which
+        would artificially inflate standard deviation and keep posteriors overly wide."""
+        if self.args.mpgts_scale == 'std':
             return super().noise()
         if len(self.residuals) < 2:
             return torch.ones(1, 1, dtype=torch.float64)
@@ -175,10 +175,10 @@ class Thompson(GridUCB):
 
 LEARNERS = {'none':  lambda args: Fixed(args),
             'ts':    lambda args: Thompson(args),
-            'cgrid': lambda args: GridUCB(args, shared=True),
-            'grid':  lambda args: GridUCB(args, shared=False),
+            'cucb': lambda args: UCB(args, shared=True),
+            'ucb':  lambda args: UCB(args, shared=False),
             'cvhct': lambda args: XArmed(args, shared=True),
             'vhct':  lambda args: XArmed(args, shared=False)}
 
 def create_learner(args):
-    return LEARNERS[args.repair_learn](args)
+    return LEARNERS[args.mpgts_learn](args)

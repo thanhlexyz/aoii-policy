@@ -26,12 +26,17 @@ STYLE = {'font.size': 6, 'axes.labelsize': 6, 'axes.titlesize': 6.5,
          'xtick.major.size': 2, 'ytick.major.size': 2,
          'legend.frameon': False, 'figure.dpi': 200}
 
+# the figures of the paper: LaTeX text in Times, so that the policy names are
+# set in small caps exactly as in the text
+PAPER_STYLE = {**STYLE, 'text.usetex': True, 'font.family': 'serif',
+               'text.latex.preamble': r'\usepackage{mathptmx}'}
+
 def thousands(v, _):
     return f'{v/1000:g}k' if v else '0'
 
 def plot_panel(args, dataset, solvers=None, out_dir=None):
     """One row of panels for a dataset, at exact column width."""
-    solvers = solvers or ['reactive', 'random', 'hybrid', 'threshold', 'grid', 'vhct']
+    solvers = solvers or ['reactive', 'random', 'hybrid', 'threshold', 'ucb', 'vhct']
     out_dir = out_dir or args.figure_dir
     with plt.rc_context(STYLE):
         fig, axes = plt.subplots(1, len(PANELS), figsize=(COLUMN_IN, ROW_IN))
@@ -84,7 +89,7 @@ def plot_panel_all(args, datasets=None, solvers=None, out_dir=None):
     """All traces in one figure: one row per dataset, the same three panels,
     one legend. Replaces the per-dataset figures in the paper."""
     datasets = datasets or ['berkeley', 'bts', 'sindit', 'synthetic']
-    solvers  = solvers  or ['reactive', 'random', 'hybrid', 'threshold', 'grid', 'vhct']
+    solvers  = solvers  or ['reactive', 'random', 'hybrid', 'threshold', 'ucb', 'vhct']
     out_dir  = out_dir  or args.figure_dir
     names = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
     with plt.rc_context(STYLE):

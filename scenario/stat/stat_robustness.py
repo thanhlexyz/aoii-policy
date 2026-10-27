@@ -7,7 +7,7 @@ import util
 from .stat_final import tail_metrics
 
 # tag -> label, in the order the figure lists them. Every policy is replayed
-# under each variation (two seeds, five for the reference); the sensor subsets
+# under each variation (five seeds); the sensor subsets
 # and the protocol checks (causal scaling, frozen learners) join the list.
 CONFIGS = [('', 'reference'), ('_causal', 'causal scaling'), ('_frozen', 'frozen at 40\\%'),
            ('_eps0.005', r'$\epsilon = 0.005$'), ('_eps0.02', r'$\epsilon = 0.02$'),
@@ -16,7 +16,7 @@ CONFIGS = [('', 'reference'), ('_causal', 'causal scaling'), ('_frozen', 'frozen
            ('_t1500', 'later block'), ('_t100000', 'later block'), ('_t20000', 'later block')]
 SUBSETS  = {'berkeley': [30, 60], 'bts': [150, 180], 'sindit': [10, 20], 'synthetic': [30, 60]}
 LOCAL    = ['reactive', 'threshold']
-PROPOSED = 'repair'
+PROPOSED = 'mpgts'
 
 def load_config(args, dataset, tag):
     rows = []
@@ -28,7 +28,7 @@ def load_config(args, dataset, tag):
 def summarize(df):
     """What each robustness claim rests on: the proposed policy's reward
     against the best baseline's (gain > 0 means it is best), its rank, and
-    how far the local-record policies sit above its AoII (collapse factor)."""
+    how far the local-record policies exceed its AoII (collapse factor)."""
     g = df.groupby('solver').mean(numeric_only=True)
     if PROPOSED not in g.index or len(g) < 2:
         return None
@@ -38,10 +38,10 @@ def summarize(df):
     rank = int((g['reward'] > g.loc[PROPOSED, 'reward']).sum() + 1)
     local = [s for s in LOCAL if s in g.index]
     collapse = g.loc[local, 'avg_aoii'].min() / max(g.loc[PROPOSED, 'avg_aoii'], 1e-6) if local else float('nan')
-    return {'repair_reward': g.loc[PROPOSED, 'reward'], 'best_baseline': best,
+    return {'mpgts_reward': g.loc[PROPOSED, 'reward'], 'best_baseline': best,
             'best_baseline_reward': baselines.loc[best, 'reward'], 'gain': gain,
             'rank': rank, 'n_policy': len(g), 'collapse': collapse,
-            'repair_aoii': g.loc[PROPOSED, 'avg_aoii'], 'repair_load': g.loc[PROPOSED, 'utilization']}
+            'mpgts_aoii': g.loc[PROPOSED, 'avg_aoii'], 'mpgts_load': g.loc[PROPOSED, 'utilization']}
 
 def stat_robustness(args):
     """RQ3: the proposed policy under every variation of the protocol."""

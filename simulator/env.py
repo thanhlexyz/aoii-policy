@@ -109,7 +109,7 @@ class Env:
         age    = self.age
         aoii   = err * age
         active = self.active
-        # the objective of eq. (2): aoii traded off against the airtime each
+        # the objective of eq. (2): aoii traded off against the transmission cost each
         # device spends, both averaged per device
         reward = - (aoii.mean() + args.alpha * active.sum() / args.n_device)
         cost   = active.sum() / args.n_irsa_slot

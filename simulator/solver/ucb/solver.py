@@ -6,15 +6,15 @@ from ..hybrid.solver import Solver as Hybrid
 
 class Solver(Hybrid):
     """The simplest learner that fits the same feedback budget as VHCT: the
-    arm space [0, p_send] is cut into n_grid_arm equispaced probabilities and
+    arm space [0, p_send] is cut into n_ucb_arm equispaced probabilities and
     each device runs UCB1 over them, one pull per feedback round, on the same
     per-slot reward VHCT receives. Rides on the event trigger like VHCT."""
 
     def __init__(self, args):
         super().__init__(args)
-        self.arms    = np.linspace(0, args.p_send, args.n_grid_arm)
-        self.n_pull  = np.zeros((args.n_device, args.n_grid_arm))
-        self.sum_r   = np.zeros((args.n_device, args.n_grid_arm))
+        self.arms    = np.linspace(0, args.p_send, args.n_ucb_arm)
+        self.n_pull  = np.zeros((args.n_device, args.n_ucb_arm))
+        self.sum_r   = np.zeros((args.n_device, args.n_ucb_arm))
         self.choice  = np.zeros(args.n_device, dtype=int)
         self.round   = 0
         self.p_send_learned    = torch.zeros(args.n_device)
@@ -38,7 +38,7 @@ class Solver(Hybrid):
         args = self.args
         env  = self.env
         mismatch   = torch.abs(env.X - self.X_hat_hat) > args.error_threshold
-        self.event = mismatch if args.grid_reactive else torch.zeros_like(mismatch)
+        self.event = mismatch if args.ucb_reactive else torch.zeros_like(mismatch)
         # like vhct, never gated by the fixed load budget
         frozen = args.freeze_after > 0 and env.global_step >= args.freeze_after * args.n_step
         if env.global_step % args.round_interval == 0 and not frozen:

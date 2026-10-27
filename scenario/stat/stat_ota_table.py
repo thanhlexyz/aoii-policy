@@ -11,7 +11,7 @@ NAME  = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 
 # the table shows the multi-seed trace; single-seed traces are stated in prose
 TABLE_DATASETS = ['sindit']
 LABEL = {'reactive': 'reactive', 'random': 'throughput', 'hybrid': 'hybrid',
-         'threshold': 'threshold', 'grid': 'grid', 'vhct': 'VHCT', 'repair': 'repair'}
+         'threshold': 'threshold', 'ucb': 'ucb', 'vhct': 'VHCT', 'mpgts': 'mpgts'}
 
 def collect(args, dataset):
     rows = []
@@ -64,7 +64,7 @@ def stat_ota_table(args):
 \newcommand{\otatable}{%
     \begin{table}[t]
         \centering
-        \caption{''' + ', '.join(b[0] for b in blocks) + r''' : delivery and reward (rank) per channel. Ideal, software: five seeds; radio: three seeds, 2000 slots.}
+        \caption{''' + ', '.join(b[0] for b in blocks) + r''' : delivery and reward (rank) per channel. Ideal, software, radio: five seeds; radio runs 2000 slots.}
         \label{tab:ota}
         \setlength{\tabcolsep}{3pt}\scriptsize
         \begin{tabular}{lrrrrrr}

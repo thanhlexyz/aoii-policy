@@ -3,7 +3,7 @@ import torch
 import os
 
 DATASETS = ['berkeley', 'bts', 'sindit', 'synthetic']
-SOLVERS  = ['random', 'reactive', 'hybrid', 'threshold', 'grid', 'vhct', 'repair']
+SOLVERS  = ['random', 'reactive', 'hybrid', 'threshold', 'ucb', 'vhct', 'mpgts']
 CHANNELS = ['ideal', 'software', 'ota']
 
 # Slot duration in second, set to the measured median inter-event interval of
@@ -48,26 +48,26 @@ def get_args():
     # threshold policy: transmit w.p. rho once the local aoii proxy reaches tau
     parser.add_argument('--threshold_tau', type=float, default=0.1)
     parser.add_argument('--threshold_rho', type=float, default=1.0)
-    # grid learner: ucb1 over this many equispaced arms on [0, p_send]
-    parser.add_argument('--n_grid_arm', type=int, default=8)
-    parser.add_argument('--grid_reactive', type=int, default=1, choices=[0, 1])
+    # ucb learner: ucb1 over this many equispaced arms on [0, p_send]
+    parser.add_argument('--n_ucb_arm', type=int, default=8)
+    parser.add_argument('--ucb_reactive', type=int, default=1, choices=[0, 1])
     # vhct ablations: which resolution descriptor, and whether the learned
     # probability rides on top of event-triggered transmissions
     parser.add_argument('--vhct_descriptor', type=str, default='model', choices=['generic', 'model'])
     parser.add_argument('--vhct_reactive', type=int, default=1, choices=[0, 1])
-    # proposed policy: the repair schedule (q, n_r, x_bg) is learned over the
+    # proposed policy: the retransmission schedule (q, n_r, x_bg) is learned over the
     # product of these candidate grids (a single value fixes a parameter) at
-    # the base station (cgrid, cvhct) or per device (grid, vhct), or fixed to
-    # the first value of each grid (none); repair_log searches the X-armed
+    # the base station (cucb, cvhct) or per device (ucb, vhct), or fixed to
+    # the first value of each grid (none); mpgts_log searches the X-armed
     # bandit's domain on a log scale
-    parser.add_argument('--repair_q_grid', type=str, default='0.02,0.05,0.1')
-    parser.add_argument('--repair_n_grid', type=str, default='1,3,5')
-    parser.add_argument('--repair_bg_grid', type=str, default='0,0.002,0.01,0.03')
-    parser.add_argument('--repair_learn', type=str, default='ts', choices=['none', 'ts', 'cgrid', 'cvhct', 'grid', 'vhct'])
-    parser.add_argument('--repair_log', type=int, default=0, choices=[0, 1])
+    parser.add_argument('--mpgts_q_grid', type=str, default='0.02,0.05,0.1')
+    parser.add_argument('--mpgts_n_grid', type=str, default='1,3,5')
+    parser.add_argument('--mpgts_bg_grid', type=str, default='0,0.002,0.01,0.03')
+    parser.add_argument('--mpgts_learn', type=str, default='ts', choices=['none', 'ts', 'cucb', 'cvhct', 'ucb', 'vhct'])
+    parser.add_argument('--mpgts_log', type=int, default=0, choices=[0, 1])
     # posterior scale of the Thompson learner: robust (median absolute
     # deviation) or the plain standard deviation
-    parser.add_argument('--repair_scale', type=str, default='mad', choices=['mad', 'std'])
+    parser.add_argument('--mpgts_scale', type=str, default='mad', choices=['mad', 'std'])
     parser.add_argument('--tag', type=str, default='')
     # dataset
     parser.add_argument('--dataset', type=str, default='berkeley', choices=DATASETS)

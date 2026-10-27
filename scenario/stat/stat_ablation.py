@@ -25,7 +25,7 @@ def stat_ablation(args):
     rows = []
     for dataset in util.DATASETS:
         for tag, label in VARIANTS:
-            pattern = os.path.join(args.csv_dir, args.mode, f'{dataset}_repair{tag}_s[0-9]*.csv')
+            pattern = os.path.join(args.csv_dir, args.mode, f'{dataset}_mpgts{tag}_s[0-9]*.csv')
             for path in sorted(glob.glob(pattern)):
                 seed = int(path.rsplit('_s', 1)[1].split('.')[0])
                 df   = pd.read_csv(path)

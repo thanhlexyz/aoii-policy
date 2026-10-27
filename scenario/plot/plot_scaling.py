@@ -1,51 +1,74 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import glob
 import os
 
-from .plot_panel import COLUMN_IN, STYLE
+from .plot_panel import COLUMN_IN, PAPER_STYLE
 from . import common
 
-ORDER = ['reactive', 'threshold', 'hybrid', 'random', 'grid', 'vhct', 'repair']
+ORDER = ['reactive', 'threshold', 'hybrid', 'random', 'ucb', 'vhct', 'mpgts']
+
+PANEL_IN = (COLUMN_IN / 2, 1.3)   # one subfigure of the paper
+
+def _sensors_axis(ax, Ks):
+    ax.set_xscale('log', base=2)
+    ax.set_xticks(Ks); ax.set_xticklabels([str(k) for k in Ks]); ax.minorticks_off()
+    ax.set_xlabel('sensors $K$ ($M = K/6$)', labelpad=1)
+    ax.grid(lw=0.3, alpha=0.4)
+
+def _save(fig, out_dir, name):
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, name)
+    fig.savefig(path); plt.close(fig)
+    print(f'[+] wrote {path}')
+    return path
 
 def plot_scaling(args, out_dir=None):
-    """Scaling figure: left, reward per policy against the number of sensors
-    K (M = K / 6); right, the share of devices the proposed learner has on one
-    schedule against the round, one line per K."""
+    """Scaling figure, as three PDFs the paper places with subfigures:
+    plot_scaling_reward.pdf, reward per policy against the number of sensors K
+    (M = K / 6); plot_scaling_consensus.pdf, the rounds the proposed learner
+    needs before 80% of the devices share one schedule, one box per K over the
+    seeds; and plot_scaling_legend.pdf, the policy legend spanning both."""
     out_dir = out_dir or os.path.join(args.paper_figure_dir, 'simulation')
     sc = pd.read_csv(os.path.join(args.csv_dir, 'scaling.csv'))
     Ks = sorted(sc.K.unique())
-    with plt.rc_context(STYLE):
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(COLUMN_IN, 1.55))
+    with plt.rc_context(PAPER_STYLE):
+        fig, ax = plt.subplots(figsize=PANEL_IN)
         for solver in ORDER:
             d = sc[sc.solver == solver].sort_values('K')
             if d.empty: continue
-            ax1.errorbar(d.K, -d.reward, yerr=d.reward_std, marker='o', ms=2.2, lw=0.8, capsize=1.2,
-                         label=common.SOLVER_LABEL[solver].replace(' (ours)', ''))
-        ax1.set_xscale('log', base=2); ax1.set_yscale('log')
-        ax1.set_xticks(Ks); ax1.set_xticklabels([str(k) for k in Ks])
-        ax1.set_xlabel('sensors $K$ ($M = K/6$)', labelpad=1); ax1.set_ylabel('$|$reward$|$', labelpad=2)
-        for K in Ks:
-            curves = []
-            for path in sorted(glob.glob(os.path.join(args.csv_dir, args.mode, f'synthetic_repair_scaleK{K}_s[0-9]*.csv'))):
-                df = pd.read_csv(path)
-                curves.append(df['agree'].groupby(df.index // 25).mean().to_numpy())
-            if not curves: continue
-            n = min(len(c) for c in curves)
-            a = np.mean([c[:n] for c in curves], axis=0)
-            # ten-round moving average, for legibility
-            a = np.convolve(a, np.ones(10) / 10, mode='valid')
-            ax2.plot(np.arange(len(a)) + 5, a, lw=0.8, label=f'$K = {K}$')
-        ax2.set_xlabel('round', labelpad=1); ax2.set_ylabel('devices on modal schedule', labelpad=2)
-        ax2.set_ylim(0, 1.02); ax2.legend(handlelength=1.2, loc='lower right', fontsize=5)
-        for ax in (ax1, ax2): ax.grid(lw=0.3, alpha=0.4)
-        handles, labels = ax1.get_legend_handles_labels()
-        fig.legend(handles, labels, ncol=4, loc='upper center', bbox_to_anchor=(0.5, 1.03), handlelength=1.2,
-                   columnspacing=0.8, handletextpad=0.4, fontsize=5.5)
-        fig.tight_layout(rect=(0, 0, 1, 0.82), pad=0.2, w_pad=0.8)
-        os.makedirs(out_dir, exist_ok=True)
-        path = os.path.join(out_dir, 'plot_scaling.pdf')
-        fig.savefig(path); plt.close(fig)
-    print(f'[+] wrote {path}')
-    return path
+            ours = solver == 'mpgts'
+            st = common.SOLVER_STYLE[solver]
+            ax.errorbar(d.K, -d.reward, yerr=common.reward_err(-d.reward, d.reward_std), color=st['color'],
+                        marker=st['marker'], ls=st['ls'], ms=5 if ours else 2.8, lw=1.4 if ours else 0.8,
+                        capsize=1.2, zorder=3 if ours else 2, label=common.SOLVER_TEX[solver])
+        common.reward_axis(ax, 'y')
+        ax.set_ylabel('reward (higher is better)', labelpad=2)
+        _sensors_axis(ax, Ks)
+        handles, labels = ax.get_legend_handles_labels()
+        fig.tight_layout(pad=0.2)
+        _save(fig, out_dir, 'plot_scaling_reward.pdf')
+
+        # a standard box per K over the seeds: quartiles, median, whiskers at
+        # 1.5 IQR and the seeds beyond them as points
+        fig, ax = plt.subplots(figsize=PANEL_IN)
+        ps = pd.read_csv(os.path.join(args.csv_dir, 'scaling_per_seed.csv'))
+        ps = ps[ps.solver == 'mpgts']
+        color = common.SOLVER_STYLE['mpgts']['color']
+        data = [ps[ps.K == K].rounds_to_agree.dropna().to_numpy() for K in Ks]
+        ax.boxplot(data, positions=Ks, widths=[0.35 * K for K in Ks], patch_artist=True,
+                   boxprops=dict(facecolor='#f6cfcf', edgecolor=color, lw=0.8),
+                   medianprops=dict(color=color, lw=1.4), whiskerprops=dict(color=color, lw=0.8),
+                   capprops=dict(color=color, lw=0.8),
+                   flierprops=dict(marker='o', ms=2.5, mfc='white', mec=color, mew=0.7))
+        ax.set_ylim(0, None)
+        ax.set_ylabel('rounds to consensus', labelpad=2)
+        _sensors_axis(ax, Ks)
+        fig.tight_layout(pad=0.2)
+        _save(fig, out_dir, 'plot_scaling_consensus.pdf')
+
+        fig = plt.figure(figsize=(COLUMN_IN, 0.3))
+        fig.legend(handles, labels, ncol=4, loc='center', handlelength=2.6, columnspacing=0.8,
+                   handletextpad=0.4, fontsize=5.5)
+        _save(fig, out_dir, 'plot_scaling_legend.pdf')
+    return out_dir

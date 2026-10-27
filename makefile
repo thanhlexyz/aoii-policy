@@ -2,10 +2,10 @@
 # on the Berkeley, BTS and SINDIT sensor traces.
 PY       ?= python3
 DATASETS ?= berkeley bts sindit synthetic
-SOLVERS  ?= reactive random hybrid threshold grid vhct repair
+SOLVERS  ?= reactive random hybrid threshold ucb vhct mpgts
 # the proposed policy closes a feedback round every 25 slots (the per-device
 # learners keep the 100-slot round of their original protocol)
-EXTRA_repair = --round_interval=25
+EXTRA_mpgts = --round_interval=25
 RUN       = $(PY) main.py --no_progress_bar --device=cpu
 
 all: run summary plots
@@ -30,7 +30,7 @@ stat_dataset:
 	  $(PY) main.py --scenario=stat_autocorr_per_dataset --dataset=$(d);)
 
 # ---------------- simulation ----------------
-SEEDS ?= 0 1 2 3 4
+SEEDS ?= 0 1 2 3 4 5 6 7 8 9
 run:
 	$(foreach d,$(DATASETS),$(foreach s,$(SOLVERS),$(foreach k,$(SEEDS),\
 	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) $(EXTRA_$(s)) & ))) \
@@ -53,14 +53,14 @@ results: summary
 # ---------------- ablation of the proposed policy (RQ2) ----------------
 # what each ingredient buys: which parameters of the schedule are learned, the
 # repeats, the background, the learner and its scale, and the round length
-ABLATION = _bgonly:--repair_q_grid=0.05,--repair_n_grid=3 _qbg:--repair_n_grid=3 \
-           _fixed:--repair_learn=none,--repair_q_grid=0.05,--repair_n_grid=3,--repair_bg_grid=0.01 \
-           _nobg:--repair_bg_grid=0 _norepeat:--repair_n_grid=0 \
-           _std:--repair_scale=std _ucb:--repair_learn=cgrid _cvhct:--repair_learn=cvhct,--repair_log=1 _device:--repair_learn=grid \
+ABLATION = _bgonly:--mpgts_q_grid=0.05,--mpgts_n_grid=3 _qbg:--mpgts_n_grid=3 \
+           _fixed:--mpgts_learn=none,--mpgts_q_grid=0.05,--mpgts_n_grid=3,--mpgts_bg_grid=0.01 \
+           _nobg:--mpgts_bg_grid=0 _norepeat:--mpgts_n_grid=0 \
+           _std:--mpgts_scale=std _ucb:--mpgts_learn=cucb _cvhct:--mpgts_learn=cvhct,--mpgts_log=1 _device:--mpgts_learn=ucb \
            _N100:--round_interval=100
 ablation:
 	$(foreach d,$(DATASETS),$(foreach k,$(SEEDS),$(foreach a,$(ABLATION),\
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=repair --seed=$(k) $(EXTRA_repair) \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=mpgts --seed=$(k) $(EXTRA_mpgts) \
 	         $(subst $(comma), ,$(word 2,$(subst :, ,$(a)))) --tag=$(word 1,$(subst :, ,$(a))) & ))) \
 	wait
 	$(PY) main.py --scenario=stat_ablation
@@ -75,11 +75,11 @@ causal:
 
 # learners frozen after 40% of the run: time-separated evaluation
 frozen:
-	$(foreach d,$(DATASETS),$(foreach s,grid vhct repair,$(foreach k,$(SEEDS),\
+	$(foreach d,$(DATASETS),$(foreach s,ucb vhct mpgts,$(foreach k,$(SEEDS),\
 	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --freeze_after=0.4 --tag=_frozen $(EXTRA_$(s)) & ))) wait
 
-# sensitivity over epsilon, alpha, K, L, and a later time block (two seeds)
-ROB_SEEDS ?= 0 1
+# sensitivity over epsilon, alpha, K, L, and a later time block (five seeds)
+ROB_SEEDS ?= $(SEEDS)
 robustness:
 	$(foreach d,$(DATASETS),$(foreach s,$(SOLVERS),$(foreach k,$(ROB_SEEDS),\
 	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --error_threshold=0.005 --tag=_eps0.005 $(THRESH_$(d)) $(EXTRA_$(s)) & \
@@ -99,7 +99,7 @@ robustness:
 # K devices over M = K / 6 slots, so the per-slot budget is held fixed; the
 # synthetic trace cycles through its 90 streams
 SCALE_K     ?= 30 60 120 240
-SCALE_SEEDS ?= 0 1 2
+SCALE_SEEDS ?= $(SEEDS)
 scaling:
 	$(foreach K,$(SCALE_K),$(foreach s,$(SOLVERS),$(foreach k,$(SCALE_SEEDS),\
 	  $(RUN) --scenario=solve --dataset=synthetic --solver=$(s) --seed=$(k) --n_device=$(K) --n_irsa_slot=$$(( $(K) / 6 )) --tag=_scaleK$(K) $(THRESH_synthetic) $(EXTRA_$(s)) & ))) wait
@@ -107,7 +107,7 @@ scaling:
 
 # ---------------- robustness across sensor populations ----------------
 # three disjoint 30-stream subsets per trace (every stream live through the run)
-SUBSET_SEEDS ?= 0 1
+SUBSET_SEEDS ?= $(SEEDS)
 subsets:
 	$(foreach o,0 30 60,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
 	  $(RUN) --scenario=solve --dataset=berkeley --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_berkeley) $(EXTRA_$(s)) & ))) wait
@@ -168,13 +168,19 @@ ota-calib:
 OTA_STEP     ?= 2000
 OTA_POWER    ?= -25
 OTA_DATASETS ?= sindit berkeley
-OTA_SEEDS    ?= 0 1 2
+OTA_SEEDS    ?= $(SEEDS)
 ota:
 	$(foreach d,$(OTA_DATASETS),$(foreach k,$(OTA_SEEDS),$(foreach s,$(SOLVERS),\
 	  $(RUN) --scenario=solve --channel=ota --dataset=$(d) --solver=$(s) --seed=$(k) --n_step=$(OTA_STEP) --tag=_ota $(EXTRA_$(s)) \
 	         --ota_tx_power=$(OTA_POWER) --ota_crowd_power=$(OTA_POWER) \
 	         --ota_host=$(PI) --ota_dir=$(PI_DIR) --ota_python=$(PI_PY);)))
 	$(PY) main.py --scenario=stat_channel
+
+# ---------------- proof ----------------
+# the Lean development behind Theorem 1 of the paper: builds and prints the
+# axioms of every theorem (only propext, Classical.choice and Quot.sound)
+proof:
+	cd lean && lake build && lake env lean Check.lean
 
 # ---------------- housekeeping ----------------
 kill:
@@ -187,6 +193,6 @@ clean:
 ROUNDS ?= 25 50 100 200
 round_interval:
 	$(foreach d,$(DATASETS),$(foreach n,$(ROUNDS),$(foreach k,$(SEEDS),\
-	  $(RUN) --scenario=solve --dataset=$(d) --solver=repair --round_interval=$(n) --tag=_N$(n) --seed=$(k) & ))) \
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=mpgts --round_interval=$(n) --tag=_N$(n) --seed=$(k) & ))) \
 	wait
 	$(PY) main.py --scenario=stat_round_interval

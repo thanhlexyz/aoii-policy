@@ -14,7 +14,7 @@ def aoii_model(x, p_event, p_correct, p_loss, delta):
 
     Correct -> wrong: the source moves (p_event) and the packet the move
     triggers is lost (p_loss), so p_event * p_loss.
-    Wrong -> correct, any of three independent repairs in a slot: the source
+    Wrong -> correct, any of three independent recovery events in a slot: the source
     returns within epsilon on its own (p_correct); the random supplement x
     fires and is delivered; the source moves again, which re-fires the
     trigger, and that packet is delivered. r is their union.
@@ -30,7 +30,7 @@ def aoii_model(x, p_event, p_correct, p_loss, delta):
 
 def model_nu(args, p_event, p_loss, delta):
     """Resolution descriptor from the model. Both reward terms are monotone in
-    x -- r rises with x so AoII falls, and airtime a = p_E + (1-p_E) x rises
+    x -- r rises with x so AoII falls, and transmission cost a = p_E + (1-p_E) x rises
     -- so the reward variation over a node is the difference of the two
     terms' values at its endpoints. The steepest node at each depth is the
     one at x = 0; nu is the smallest constant whose nu * rho^h dominates that
@@ -121,7 +121,7 @@ class Solver(BaseSolver):
         self.sum_delta += gap * mismatch
         self.n_total   += 1
         # the learner is not gated by the fixed load budget the hybrid rule
-        # uses: deciding how much airtime to add on top of the trigger is its
+        # uses: deciding how much transmission rate to add on top of the trigger is its
         # job, and the alpha term of the reward is what charges it for that
         # pull one arm per device at the start of each learning round
         self.frozen = args.freeze_after > 0 and env.global_step >= args.freeze_after * args.n_step

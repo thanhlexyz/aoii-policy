@@ -13,11 +13,11 @@ NOISE        = 0.002   # measurement noise, below the trigger threshold
 
 # the mix of one population: (kind, count). Each kind encodes one property
 # the real traces exhibit but cannot be varied on:
-#   quiet  -- piecewise constant, rare heavy-tailed jumps: long lockups
+#   quiet  -- piecewise constant, rare heavy-tailed step changes: prolonged desynchronization
 #   active -- bounded random walk crossing epsilon every few slots: most of the load
 #   drift  -- slow seasonal swing plus a trend that leaves the initial range:
 #             causal scaling and nonstationarity
-#   burst  -- piecewise constant with jumps at times common to the group:
+#   burst  -- piecewise constant with transitions at times common to the group:
 #             correlated triggers that collide together
 MIX = [('quiet', 10), ('active', 5), ('drift', 7), ('burst', 8)]
 

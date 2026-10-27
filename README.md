@@ -6,15 +6,15 @@ device picks a randomized transmission probability to keep the base station's
 estimate of it both fresh and correct -- the age of incorrect information. The
 ground truth each device reports is a real sensor trace (Intel Berkeley, BTS,
 SINDIT) replayed as a zero-order hold, or the generated `synthetic` trace whose
-streams encode one property each (long lockups, load, drift, correlated
+streams encode one property each (persistent error states, load, drift, correlated
 bursts) with a regime change halfway.
 
 Seven policies are compared: `reactive` (send whenever the local estimate is
 stale), `random` (a fixed rate that maximizes IRSA throughput), `hybrid`
 (reactive plus a fixed supplement sized to the leftover load budget),
-`threshold` (send once a local AoII proxy crosses a threshold), `grid` and
+`threshold` (send once a local AoII proxy crosses a threshold), `ucb` and
 `vhct` (reactive plus a uniform supplement learned per device by UCB1 or an
-X-armed bandit), and `repair`, the proposed policy: reactive plus blind repair
+X-armed bandit), and `mpgts` (MPGTS), the proposed policy: reactive plus proactive retransmission
 (spread repeats of the record after every trigger) plus a background rate
 the base station learns via multiple-play Thompson sampling and broadcasts each round.
 
@@ -35,6 +35,7 @@ decoded -- in a software channel or on ADALM-Pluto radios.
   (radios or software), `server.py` (the JSON-lines slot server).
 - `pysdr/` -- OFDM modem and Pluto drivers, from the wireless-pgd testbed.
 - `ref/irsa/` -- a third-party IRSA implementation, kept for reference only.
+- `lean/` -- machine-checked proofs behind the convergence theorem of the paper (`make proof`).
 - `data/<dataset>/` -- normalized traces (gitignored); `result/` -- csv and figures.
 
 ## Install

@@ -11,8 +11,8 @@ from .plot_scaling import plot_scaling
 DATASETS = ['berkeley', 'bts', 'sindit', 'synthetic']
 METRICS  = ['avg_aoii', 'utilization', 'reward']
 # with and without the reactive baseline, whose scale hides the other three
-SOLVER_SETS = [['reactive', 'random', 'hybrid', 'threshold', 'grid', 'vhct', 'repair'],
-               ['random', 'hybrid', 'threshold', 'grid', 'vhct', 'repair']]
+SOLVER_SETS = [['reactive', 'random', 'hybrid', 'threshold', 'ucb', 'vhct', 'mpgts'],
+               ['random', 'hybrid', 'threshold', 'ucb', 'vhct', 'mpgts']]
 
 def make_figures(args):
     """Regenerate every simulation figure the paper includes, straight into

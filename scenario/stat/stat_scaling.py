@@ -43,10 +43,12 @@ def stat_scaling(args):
     if not rows:
         print('[!] no scaling runs on disk'); return
     df  = pd.DataFrame(rows)
+    df.to_csv(os.path.join(args.csv_dir, 'scaling_per_seed.csv'), index=None, float_format='%.6f')
     agg = (df.groupby(['solver', 'K'], sort=False)
              .agg(n_seed=('seed', 'count'), avg_aoii=('avg_aoii', 'mean'), load=('utilization', 'mean'),
                   p_success=('p_success', 'mean'), reward=('reward', 'mean'), reward_std=('reward', 'std'),
-                  rounds_to_agree=('rounds_to_agree', 'mean')).reset_index())
+                  rounds_to_agree=('rounds_to_agree', 'mean'),
+                  rounds_to_agree_std=('rounds_to_agree', 'std')).reset_index())
     path = os.path.join(args.csv_dir, 'scaling.csv')
     agg.to_csv(path, index=None, float_format='%.6f')
     pd.set_option('display.float_format', '{:.4f}'.format)

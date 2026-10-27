@@ -7,7 +7,7 @@ from .plot_panel import COLUMN_IN, STYLE
 LABEL = {'software': 'software channel', 'ota': 'ADALM-Pluto'}
 
 def plot_calib(args):
-    """Both calibration sweeps on one axes. Transmit power means a dB SNR in
+    """Both calibration evaluations on one axes. Transmit power means a dB SNR in
     software and a Pluto transmit gain on the radios, so the two curves share
     an axis only in the sense that each locates its own operating plateau."""
     with plt.rc_context(STYLE):

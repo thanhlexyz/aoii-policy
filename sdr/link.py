@@ -1,22 +1,22 @@
-"""The radio side of one IRSA frame: transmit each slot, capture it, then let
-sdr.irsa peel the collisions apart."""
+"""The radio side of one IRSA frame: transmit each slot, capture it, then
+iteratively resolve collisions via successive interference cancellation."""
 import numpy as np
 
 from sdr import irsa
 
 class RadioIrsaLink:
-    """Three ADALM-Plutos wired into a combiner at the receiver, in the usual
-    mMTC testbed arrangement:
+    """Three ADALM-Plutos wired into a combiner at the receiver in an mMTC
+    testbed arrangement:
 
-      tx_uri     one device under test, on its own propagation path
-      crowd_uri  the aggregate of the other N-1 contending devices
-      rx_uri     the base station
+      tx_uri     device under test, on its own propagation path
+      crowd_uri  superposition of the other N-1 contending devices
+      rx_uri     base station
 
-    Every replica really is on the air, so the base station decodes and cancels
-    the crowd exactly as it does the device under test; what the split buys is
-    a device under test whose path is genuinely independent of the interference
-    it contends against. The crowd shares one path between its members, which
-    is the honest limit of a three-radio bench.
+    Every replica is transmitted over the air, allowing the base station to
+    decode and cancel the crowd in the same manner as the device under test.
+    This separation ensures the device under test experiences an independent
+    propagation path from contending interference, while emulated crowd devices
+    share a path, reflecting the physical constraint of a three-radio testbed.
     """
 
     def __init__(self, args):
@@ -86,7 +86,7 @@ class SoftwareIrsaLink:
     can be tested without hardware.
 
     tx_power is a dB SNR here and a Pluto transmit gain in dB on the radios;
-    the calibration sweep is what maps one onto the other."""
+    the calibration evaluation is what maps one onto the other."""
 
     def __init__(self, args, seed=0):
         self.args = args
