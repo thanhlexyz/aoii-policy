@@ -1,16 +1,12 @@
-"""Software model of the 3-radio adversarial channel.
+"""Software channel model for the 3-radio IRSA link.
 
-The over-the-air testbed superimposes the transmitter and the adversary at the
-receiver:  y = h * z + a + n,  where z is the victim's channel-symbol vector,
-a is the adversary's injected perturbation, n is AWGN and h is a residual CSI
-phase (slow Rayleigh, |h|=1 after amplitude equalization). Everything is done
-on the k complex data tones, so the software channel and the real OFDM link are
-described by the same equation (Sec. II of the paper).
-
-The adversary's on-air power is measured relative to the victim's by the
-perturbation-to-signal ratio  PSR = ||a||^2 / ||z||^2. Because the receiver
-normalizes to unit mean tone power, we keep ||z||^2 = k and scale a to the
-requested PSR just before superposition.
+The over-the-air testbed superimposes the transmitter (device under test) and
+the emulated crowd (interfering devices) at the receiver:
+  y = h * z + a + n,
+where z is the device under test's channel-symbol vector, a is the superposition
+of the other K-1 contending devices, n is AWGN, and h is a residual channel phase
+(slow Rayleigh fading, |h|=1 after amplitude equalization). Operations are
+performed across the complex OFDM data tones, matching the physical link.
 """
 import math
 

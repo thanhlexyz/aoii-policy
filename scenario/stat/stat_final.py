@@ -52,7 +52,7 @@ def stat_final(args):
     print(f'[+] wrote {out} and {path}')
 
 TABLE_ORDER = ['reactive', 'random', 'hybrid', 'threshold', 'grid', 'vhct', 'repair']
-NAME  = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
+NAME  = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
 LABEL = {'reactive': r'\textsc{Reactive}', 'random': r'\textsc{Throughput}', 'hybrid': r'\textsc{Hybrid}',
          'threshold': r'\textsc{Threshold}', 'grid': r'\textsc{Grid-UCB}', 'vhct': r'\textsc{VHCT}',
          'repair': r'\textsc{Repair} (ours)'}

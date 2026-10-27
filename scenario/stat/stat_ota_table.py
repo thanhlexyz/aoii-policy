@@ -7,7 +7,7 @@ import util
 from .stat_final import tail_metrics
 
 CHANNEL_TAG = {'ideal': '', 'software': '_sw', 'ota': '_ota'}
-NAME  = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
+NAME  = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
 # the table shows the multi-seed trace; single-seed traces are stated in prose
 TABLE_DATASETS = ['sindit']
 LABEL = {'reactive': 'reactive', 'random': 'throughput', 'hybrid': 'hybrid',

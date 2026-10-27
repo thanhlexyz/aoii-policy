@@ -1,7 +1,7 @@
 # aoii-dataset: AoII-aware randomized sampling over an IRSA uplink, replayed
 # on the Berkeley, BTS and SINDIT sensor traces.
 PY       ?= python3
-DATASETS ?= berkeley bts sindit
+DATASETS ?= berkeley bts sindit synthetic
 SOLVERS  ?= reactive random hybrid threshold grid vhct repair
 # the proposed policy closes a feedback round every 25 slots (the per-device
 # learners keep the 100-slot round of their original protocol)
@@ -46,6 +46,7 @@ results: summary
 	$(PY) main.py --scenario=stat_subsets
 	$(PY) main.py --scenario=stat_round_interval
 	$(PY) main.py --scenario=stat_channel
+	$(PY) main.py --scenario=stat_scaling
 	$(PY) main.py --scenario=stat_ota_table
 	$(PY) main.py --scenario=make_figures
 
@@ -90,8 +91,19 @@ robustness:
 	  $(RUN) --scenario=solve --dataset=$(d) --solver=$(s) --seed=$(k) --avg_n_irsa_replica=3 --tag=_L3 $(THRESH_$(d)) $(EXTRA_$(s)) & ))) wait
 	$(foreach s,$(SOLVERS),$(foreach k,$(ROB_SEEDS),\
 	  $(RUN) --scenario=solve --dataset=berkeley --solver=$(s) --seed=$(k) --start_slot=1500 --tag=_t1500 $(THRESH_berkeley) $(EXTRA_$(s)) & \
-	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --start_slot=100000 --tag=_t100000 $(THRESH_sindit) $(EXTRA_$(s)) & )) wait
+	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --start_slot=100000 --tag=_t100000 $(THRESH_sindit) $(EXTRA_$(s)) & \
+	  $(RUN) --scenario=solve --dataset=synthetic --solver=$(s) --seed=$(k) --start_slot=20000 --tag=_t20000 $(THRESH_synthetic) $(EXTRA_$(s)) & )) wait
 	$(PY) main.py --scenario=stat_robustness
+
+# ---------------- scaling in the number of sensors ----------------
+# K devices over M = K / 6 slots, so the per-slot budget is held fixed; the
+# synthetic trace cycles through its 90 streams
+SCALE_K     ?= 30 60 120 240
+SCALE_SEEDS ?= 0 1 2
+scaling:
+	$(foreach K,$(SCALE_K),$(foreach s,$(SOLVERS),$(foreach k,$(SCALE_SEEDS),\
+	  $(RUN) --scenario=solve --dataset=synthetic --solver=$(s) --seed=$(k) --n_device=$(K) --n_irsa_slot=$$(( $(K) / 6 )) --tag=_scaleK$(K) $(THRESH_synthetic) $(EXTRA_$(s)) & ))) wait
+	$(PY) main.py --scenario=stat_scaling
 
 # ---------------- robustness across sensor populations ----------------
 # three disjoint 30-stream subsets per trace (every stream live through the run)
@@ -103,6 +115,8 @@ subsets:
 	  $(RUN) --scenario=solve --dataset=bts --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_bts) $(EXTRA_$(s)) & ))) wait
 	$(foreach o,0 10 20,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
 	  $(RUN) --scenario=solve --dataset=sindit --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_sindit) $(EXTRA_$(s)) & ))) wait
+	$(foreach o,0 30 60,$(foreach s,$(SOLVERS),$(foreach k,$(SUBSET_SEEDS),\
+	  $(RUN) --scenario=solve --dataset=synthetic --solver=$(s) --seed=$(k) --stream_offset=$(o) --tag=_o$(o) $(THRESH_synthetic) $(EXTRA_$(s)) & ))) wait
 	$(PY) main.py --scenario=stat_subsets
 
 # ---------------- threshold baseline: offline sweep of (tau, rho) ----------------
@@ -129,6 +143,7 @@ example_sensor:
 THRESH_berkeley ?= --threshold_tau=0.5 --threshold_rho=1
 THRESH_bts      ?= --threshold_tau=2 --threshold_rho=0.5
 THRESH_sindit   ?= --threshold_tau=2 --threshold_rho=0.5
+THRESH_synthetic ?= --threshold_tau=2 --threshold_rho=1
 PI      ?= pi5
 PI_DIR  ?= ~/aoii-dataset
 PI_PY   ?= ~/venv/bin/python

@@ -6,7 +6,7 @@ import os
 from .plot_panel import COLUMN_IN, STYLE
 from . import common
 
-NAMES    = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
+NAMES    = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
 CHANNELS = [('ideal', 'slot occupancy', 'o'), ('software', 'software waveform', 's'), ('ota', 'radios', '^')]
 ORDER    = ['reactive', 'threshold', 'hybrid', 'random', 'grid', 'vhct', 'repair']
 

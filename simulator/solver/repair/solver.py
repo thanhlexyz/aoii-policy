@@ -6,24 +6,27 @@ from .learner import create_learner
 class Solver(BaseSolver):
     """Event trigger with blind repair and a learned background rate.
 
-    Device side. A device transmits when its reading differs from its local
-    record by more than epsilon (the event trigger). With no acknowledgement it
-    cannot know whether that packet collided, so it repairs blindly: it re-sends
-    the record up to repair_n times, each with probability repair_q per slot,
-    which spreads the repeats so a burst of simultaneous triggers does not
-    collide again in the next slot. A quiet device spends no airtime. On top, a
-    background rate x_bg (sent w.p. x_bg in every slot) bounds the lockup that
-    survives every repeat; it is the one quantity the policy has to size per
-    deployment.
+    Device side: A device transmits when its reading differs from its local
+    record by more than epsilon (the event trigger). Lacking acknowledgements,
+    it cannot detect collisions directly, so it executes blind repair: it
+    re-sends the record up to repair_n times, each with probability repair_q
+    per slot. Spreading repeats across slots prevents simultaneous triggers from
+    re-colliding in the next slot, while quiet devices spend no airtime.
+    Afterward, a background rate x_bg (transmitted with probability x_bg per slot)
+    bounds the lockup duration surviving all repeats.
 
-    The three numbers (repair_q, repair_n, x_bg) form the repair schedule
-    theta; a device transmits with probability pi_theta(m) that depends only on
-    its count m of re-sends since the last trigger: repair_q while m < repair_n,
-    x_bg after. Base station side. Every round_interval slots the base station
-    scores the network-mean reward of eq. (3) for the schedule it broadcast and
-    pulls the next one from its learner (learner.py; by default UCB1 over the
-    product of the --repair_*_grid candidates): one broadcast per round is the
-    only downlink signalling."""
+    The triple (repair_q, repair_n, x_bg) defines the repair schedule theta;
+    a device transmits with probability pi_theta(m) depending on its count m
+    of re-sends since the latest trigger: repair_q while m < repair_n, and x_bg
+    afterward.
+
+    Base station side: Every round_interval slots, the base station evaluates
+    the per-device reward combining AoII and airtime penalty, credits each
+    observation to the assigned candidate schedule, and selects schedules for
+    the next round via the configured bandit learner (by default, multiple-play
+    Thompson sampling with a robust posterior scale over the grid candidates).
+    Broadcasting the assigned schedule indices once per round serves as the sole
+    downlink signaling."""
 
     def __init__(self, args):
         super().__init__(args)
@@ -38,7 +41,9 @@ class Solver(BaseSolver):
 
     def info(self, n_repair=0.0):
         q, n, bg = self.theta.mean(dim=0).tolist()
-        return {'n_repair': n_repair, 'q': q, 'n_repeat': n, 'bg': bg}
+        # how far the devices agree on one schedule: the share on the modal arm
+        agree = self.theta.unique(dim=0, return_counts=True)[1].max().item() / self.args.n_device
+        return {'n_repair': n_repair, 'q': q, 'n_repeat': n, 'bg': bg, 'agree': agree}
 
     def select_action(self, observation):
         args = self.args

@@ -6,7 +6,7 @@ import os
 
 from .plot_panel import COLUMN_IN, STYLE
 
-NAMES = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
+NAMES = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
 
 def plot_ablation(args, out_dir=None):
     """RQ2 figure: the reward each ablated variant reaches, one panel per

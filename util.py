@@ -2,18 +2,18 @@ import argparse
 import torch
 import os
 
-DATASETS = ['berkeley', 'bts', 'sindit']
+DATASETS = ['berkeley', 'bts', 'sindit', 'synthetic']
 SOLVERS  = ['random', 'reactive', 'hybrid', 'threshold', 'grid', 'vhct', 'repair']
 CHANNELS = ['ideal', 'software', 'ota']
 
 # Slot duration in second, set to the measured median inter-event interval of
 # each trace (scenario/stat/stat_sampling_interval_per_dataset).
-SLOT_INTERVAL = {'berkeley': 35, 'bts': 18, 'sindit': 3}
+SLOT_INTERVAL = {'berkeley': 35, 'bts': 18, 'sindit': 3, 'synthetic': 1}
 
 # Run length in slot. Capped so the whole run replays live readings: past the
 # end of a trace the zero-order hold freezes and every policy scores a
 # degenerate zero. BTS covers a single day, hence the shorter run.
-N_STEP = {'berkeley': 10000, 'bts': 3000, 'sindit': 10000}
+N_STEP = {'berkeley': 10000, 'bts': 3000, 'sindit': 10000, 'synthetic': 20000}
 
 def create_folders(args):
     for folder in [args.figure_dir, args.data_dir, args.csv_dir, args.raw_dir]:

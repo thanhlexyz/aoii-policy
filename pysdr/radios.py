@@ -1,10 +1,10 @@
-"""ADALM-Pluto radios for the 3-node testbed: TX, RX, and the adversary.
+"""ADALM-Pluto radios for the 3-node testbed: device under test (TX),
+interferer emulator (CROWD), and base station (RX).
 
-All three are driven from one Raspberry Pi over USB; their SMA ports are wired
-into a combiner so the adversary superimposes on the transmitter at the
-receiver. TX and the adversary run cyclic TX buffers, so once the adversary is
-started it broadcasts its fixed (image/label-agnostic) perturbation waveform
-continuously while the receiver captures superposed frames.
+Driven from one Raspberry Pi over USB; their SMA ports are wired into a combiner
+so the emulated crowd superimposes on the device under test at the receiver.
+TX and CROWD run cyclic TX buffers to stream waveforms while the receiver
+captures superposed frames.
 
 Only imported on the Pi (needs pyadi-iio); the software experiments never touch
 this module.
@@ -69,20 +69,15 @@ class _PlutoTx:
 
 
 class Transmitter(_PlutoTx):
-    """The legitimate transmitter: sends the victim's channel symbols."""
+    """The transmitter for the device under test."""
 
 
-class Adversary(_PlutoTx):
-    """The third radio: broadcasts a perturbation waveform (no victim pilots).
+class CrowdTransmitter(_PlutoTx):
+    """The transmitter emulating the superposition of contending devices."""
 
-    A universal, image/label-agnostic perturbation is a *fixed* waveform, so the
-    adversary is prepared once and left transmitting in cyclic mode; it needs no
-    per-frame synchronization to the victim.
-    """
 
-    def prepare_perturbation(self, a_air):
-        # no preamble: the adversary is not a cooperative frame source
-        self.prepare(a_air, preamble=False)
+class Adversary(CrowdTransmitter):
+    """Alias for backwards compatibility with legacy runner scripts."""
 
 
 class Receiver:

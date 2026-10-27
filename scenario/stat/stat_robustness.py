@@ -13,8 +13,8 @@ CONFIGS = [('', 'reference'), ('_causal', 'causal scaling'), ('_frozen', 'frozen
            ('_eps0.005', r'$\epsilon = 0.005$'), ('_eps0.02', r'$\epsilon = 0.02$'),
            ('_alpha0.5', r'$\alpha = 0.5$'), ('_alpha2', r'$\alpha = 2$'),
            ('_K20', '$K = 20$'), ('_K40', '$K = 40$'), ('_L3', '$L = 3$'),
-           ('_t1500', 'later block'), ('_t100000', 'later block')]
-SUBSETS  = {'berkeley': [30, 60], 'bts': [150, 180], 'sindit': [10, 20]}
+           ('_t1500', 'later block'), ('_t100000', 'later block'), ('_t20000', 'later block')]
+SUBSETS  = {'berkeley': [30, 60], 'bts': [150, 180], 'sindit': [10, 20], 'synthetic': [30, 60]}
 LOCAL    = ['reactive', 'threshold']
 PROPOSED = 'repair'
 

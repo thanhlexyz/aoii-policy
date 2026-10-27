@@ -6,8 +6,9 @@ from .plot_line import plot_line
 from .plot_ablation import plot_ablation
 from .plot_robustness import plot_robustness
 from .plot_ota import plot_ota
+from .plot_scaling import plot_scaling
 
-DATASETS = ['berkeley', 'bts', 'sindit']
+DATASETS = ['berkeley', 'bts', 'sindit', 'synthetic']
 METRICS  = ['avg_aoii', 'utilization', 'reward']
 # with and without the reactive baseline, whose scale hides the other three
 SOLVER_SETS = [['reactive', 'random', 'hybrid', 'threshold', 'grid', 'vhct', 'repair'],
@@ -19,7 +20,7 @@ def make_figures(args):
     out_dir = os.path.join(args.paper_figure_dir, 'simulation')
     n = 0
     # RQ2-RQ4, from the csv summaries `make results` writes
-    for plot in [plot_ablation, plot_robustness, plot_ota]:
+    for plot in [plot_ablation, plot_robustness, plot_ota, plot_scaling]:
         try:
             plot(args, out_dir=out_dir); n += 1
         except FileNotFoundError as e:

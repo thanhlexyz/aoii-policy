@@ -24,6 +24,8 @@ def stat_threshold(args):
         for path in sorted(glob.glob(pattern)):
             stem = os.path.basename(path).replace('.csv', '')
             cfg  = stem.split('_threshold_')[1].rsplit('_s', 1)[0]      # t<tau>_r<rho>
+            if '_r' not in cfg:
+                continue   # a later-block run (_t<slot>), not a sweep point
             tau  = float(cfg.split('_r')[0][1:]); rho = float(cfg.split('_r')[1])
             seed = int(stem.rsplit('_s', 1)[1])
             rows.append({'dataset': dataset, 'tau': tau, 'rho': rho, 'seed': seed,

@@ -13,11 +13,11 @@ def grids(args):
     return [np.array([float(v) for v in getattr(args, p + '_grid').split(',')]) for p in PARAMS]
 
 class Learner:
-    """Chooses the repair schedule of every device once per round and is told
-    the per-device reward of eq. (3) at the end of it. A shared learner
-    (shared = True, the base station) pools the rewards into their mean and
-    broadcasts one schedule; a per-device learner keeps one instance per
-    device. Freezing stops both the updates and the arm changes."""
+    """Chooses the repair schedule of every device once per round and observes
+    the per-device reward combining AoII and airtime penalty at the end of it.
+    A network-mean learner (shared = True) pools rewards into their mean and
+    broadcasts one schedule; a multiple-play or decentralized learner maintains
+    per-device reward attribution. Freezing stops both updates and arm switches."""
 
     def __init__(self, args, shared=True):
         self.args     = args

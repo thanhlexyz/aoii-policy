@@ -5,7 +5,9 @@ Collisions are destructive, there is no per-packet acknowledgement, and every
 device picks a randomized transmission probability to keep the base station's
 estimate of it both fresh and correct -- the age of incorrect information. The
 ground truth each device reports is a real sensor trace (Intel Berkeley, BTS,
-SINDIT) replayed as a zero-order hold, not a synthetic Markov source.
+SINDIT) replayed as a zero-order hold, or the generated `synthetic` trace whose
+streams encode one property each (long lockups, load, drift, correlated
+bursts) with a regime change halfway.
 
 Seven policies are compared: `reactive` (send whenever the local estimate is
 stale), `random` (a fixed rate that maximizes IRSA throughput), `hybrid`
@@ -13,8 +15,8 @@ stale), `random` (a fixed rate that maximizes IRSA throughput), `hybrid`
 `threshold` (send once a local AoII proxy crosses a threshold), `grid` and
 `vhct` (reactive plus a uniform supplement learned per device by UCB1 or an
 X-armed bandit), and `repair`, the proposed policy: reactive plus blind repair
-(a few spread repeats of the record after every trigger) plus a background rate
-the base station learns with a scale-free UCB1 and broadcasts each round.
+(spread repeats of the record after every trigger) plus a background rate
+the base station learns via multiple-play Thompson sampling and broadcasts each round.
 
 The uplink itself has two backends. `ideal` counts slot occupancy. `software`
 and `ota` build a real OFDM waveform, decode a CRC, and cancel what they
@@ -46,7 +48,9 @@ python3 -m pip install -r requirements-pi.txt   # the pi driving the radios
 `data/raw/berkeley/raw.csv` (`moteid,timestamp,temperature,humidity,light,voltage`),
 `data/raw/bts/raw.csv` (`station_id,parameter_id,reading_time,value`) and
 `data/raw/sindit/*.csv` (`time,value`, one file per sensor) in place and run
-`make prepare`. That wipes `data/<dataset>/` first.
+`make prepare`. That wipes `data/<dataset>/` first. The synthetic trace needs
+no raw input: `python3 main.py --scenario=normalize --dataset=synthetic`
+regenerates it from `simulator/normalizer/synthetic/` (seeded).
 
 ## Reproduce
 
@@ -55,6 +59,7 @@ make stat_sensor stat_dataset   # trace statistics
 make run                        # 3 datasets x 7 policies x 5 seeds (RQ1)
 make ablation                   # ingredients of the proposed policy (RQ2)
 make causal frozen robustness subsets round_interval   # protocol variations (RQ3)
+make scaling                    # 30 to 240 sensors on the synthetic trace
 make ota-sw                     # the software waveform channel (RQ4)
 make results                    # every csv summary, ../paper/figure/tab-main.tex
                                 # and the RQ2-RQ4 figures under ../paper/figure/simulation/

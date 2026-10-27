@@ -83,10 +83,10 @@ def plot_panel(args, dataset, solvers=None, out_dir=None):
 def plot_panel_all(args, datasets=None, solvers=None, out_dir=None):
     """All traces in one figure: one row per dataset, the same three panels,
     one legend. Replaces the per-dataset figures in the paper."""
-    datasets = datasets or ['berkeley', 'bts', 'sindit']
+    datasets = datasets or ['berkeley', 'bts', 'sindit', 'synthetic']
     solvers  = solvers  or ['reactive', 'random', 'hybrid', 'threshold', 'grid', 'vhct']
     out_dir  = out_dir  or args.figure_dir
-    names = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
+    names = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
     with plt.rc_context(STYLE):
         fig, rows = plt.subplots(len(datasets), len(PANELS),
                                  figsize=(COLUMN_IN, 0.4 * len(datasets) + 0.25))
