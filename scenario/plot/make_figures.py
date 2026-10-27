@@ -8,7 +8,7 @@ from .plot_robustness import plot_robustness
 from .plot_ota import plot_ota
 from .plot_scaling import plot_scaling
 
-DATASETS = ['berkeley', 'bts', 'sindit', 'synthetic']
+DATASETS = ['synthetic', 'berkeley', 'bts', 'sindit']
 METRICS  = ['avg_aoii', 'utilization', 'reward']
 # with and without the reactive baseline, whose scale hides the other three
 SOLVER_SETS = [['reactive', 'random', 'hybrid', 'threshold', 'ucb', 'vhct', 'mpgts'],

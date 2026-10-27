@@ -6,7 +6,7 @@ import os
 
 from .plot_panel import COLUMN_IN, STYLE
 
-NAMES = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
+NAMES = {'synthetic': 'Synthetic', 'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
 CLIP  = 50   # percent; gains beyond this saturate the colour scale
 
 def plot_robustness(args, out_dir=None):

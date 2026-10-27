@@ -11,7 +11,7 @@ from . import common
 SHOWN = {'': r'\textsc{Mpgts} (full policy)', '_norepeat': 'no repeats', '_nobg': 'no background',
          '_std': 'std.\\ dev.\\ instead of robust scale', '_ucb': 'UCB1, one arm per round'}
 
-NAMES = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
+NAMES = {'synthetic': 'Synthetic', 'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
 
 def plot_ablation(args, out_dir=None):
     """RQ2 figure: the reward each ablated variant reaches, one panel per

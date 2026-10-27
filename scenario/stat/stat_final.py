@@ -46,13 +46,13 @@ def stat_final(args):
     out = os.path.join(args.csv_dir, 'summary.csv')
     agg.to_csv(out, index=None, float_format='%.6f')
     welch(df, args)
-    main_table(agg, args)
+    main_table(agg, df, args)
     pd.set_option('display.float_format', '{:.4f}'.format)
     print(agg.to_string(index=False))
     print(f'[+] wrote {out} and {path}')
 
 TABLE_ORDER = ['reactive', 'random', 'hybrid', 'threshold', 'ucb', 'vhct', 'mpgts']
-NAME  = {'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT', 'synthetic': 'Synthetic'}
+NAME  = {'synthetic': 'Synthetic', 'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}
 LABEL = {'reactive': r'\textsc{Reactive}', 'random': r'\textsc{Throughput}', 'hybrid': r'\textsc{Hybrid}',
          'threshold': r'\textsc{Threshold}', 'ucb': r'\textsc{UCB}', 'vhct': r'\textsc{VHCT}',
          'mpgts': r'\tool (ours)'}
@@ -65,11 +65,21 @@ def fmt_aoii(m, sd):
     if m >= 1:   return f'${m:.1f} \\pm {sd:.1f}$'
     return fmt(m, sd, 3) if m >= 0.01 else fmt(m, sd, 4)
 
-def main_table(agg, args):
+ALPHA = 0.01   # significance level of every test the paper reports
+
+def seeds_in_words(df):
+    n = df.groupby(['dataset', 'solver']).seed.count()
+    lo, hi = int(n.min()), int(n.max())
+    words = {5: 'five', 10: 'ten', 15: 'fifteen', 20: 'twenty'}
+    return words.get(hi, str(hi)) if lo == hi else f'{lo} to {hi}'
+
+def main_table(agg, df, args):
     """Writes ../paper/figure/tab-main.tex, the one table RQ1 rests on:
     steady-state AoII per policy (rows) and trace (columns), the policies
-    sorted from worst to best by their mean AoII rank over the traces and the
-    best AoII per trace in bold."""
+    sorted from worst to best by their mean AoII rank over the traces, the
+    best AoII per trace in bold and marked when it differs from the runner-up
+    at level ALPHA under Welch's t-test on the per-seed values."""
+    from scipy import stats
     datasets = [d for d in util.DATASETS if d in set(agg.dataset)]
     aoii = agg.pivot(index='solver', columns='dataset', values='avg_aoii')
     std  = agg.pivot(index='solver', columns='dataset', values='avg_aoii_std')
@@ -80,13 +90,19 @@ def main_table(agg, args):
         cells = []
         for dataset in datasets:
             cell = fmt_aoii(aoii.loc[solver, dataset], std.loc[solver, dataset]).replace(r' \pm ', r'{\pm}')
-            if aoii.loc[solvers, dataset].idxmin() == solver: cell = rf'$\mathbf{{{cell[1:-1]}}}$'
+            ranked = aoii.loc[solvers, dataset].sort_values()
+            if ranked.index[0] == solver:
+                cell = rf'$\mathbf{{{cell[1:-1]}}}$'
+                d = df[df.dataset == dataset]
+                best, second = d[d.solver == ranked.index[0]].avg_aoii, d[d.solver == ranked.index[1]].avg_aoii
+                if len(best) > 1 and len(second) > 1 and stats.ttest_ind(best, second, equal_var=False).pvalue < ALPHA:
+                    cell += r'$^{\dagger}$'
             cells.append(cell)
         rows.append(f'      {LABEL[solver]} & ' + ' & '.join(cells) + r' \\')
     tex = r"""\newcommand{\maintable}{%
   \begin{table}[t]
     \centering
-    \caption{Steady-state AoII per policy, sorted from worst to best (mean $\pm$ standard deviation over five seeds on the final 1000 slots, best in bold).}
+    \caption{Steady-state AoII per policy, sorted from worst to best (mean $\pm$ standard deviation over """ + seeds_in_words(df) + r""" seeds on the final 1000 slots; best in bold, $\dagger$: differs from the runner-up at $p < """ + f'{ALPHA:g}' + r""" $, Welch's $t$-test).}
     \label{tab:main}
     \setlength{\tabcolsep}{1pt}\scriptsize
     \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}l""" + 'r' * len(datasets) + r"""@{}}
@@ -107,22 +123,26 @@ def main_table(agg, args):
 
 def welch(df, args):
     """Welch t-test, the proposed policy against every other policy, on the
-    per-seed steady-state aoii and reward. This is what any 'indistinguishable'
-    or 'better' claim in the paper has to point at."""
+    per-seed steady-state aoii and reward, with a Bonferroni level over the
+    baselines of one trace; `best_baseline` marks the baseline with the best
+    mean of that metric, the comparison RQ1 quotes. This is what any
+    'indistinguishable' or 'better' claim in the paper has to point at."""
     from scipy import stats
     rows = []
     for dataset in util.DATASETS:
         d = df[df.dataset == dataset]
         v = d[d.solver == 'mpgts']
-        for solver in util.SOLVERS:
-            if solver == 'mpgts': continue
+        others = [s for s in util.SOLVERS if s != 'mpgts' and (d.solver == s).sum() > 1]
+        if len(v) < 2 or not others: continue
+        means = d[d.solver.isin(others)].groupby('solver')[['avg_aoii', 'reward']].mean()
+        for solver in others:
             o = d[d.solver == solver]
-            if len(v) < 2 or len(o) < 2: continue
-            for metric in ['avg_aoii', 'reward']:
+            for metric, best in [('avg_aoii', means.avg_aoii.idxmin()), ('reward', means.reward.idxmax())]:
                 t, pval = stats.ttest_ind(v[metric], o[metric], equal_var=False)
-                rows.append({'dataset': dataset, 'vs': solver, 'metric': metric,
+                rows.append({'dataset': dataset, 'vs': solver, 'metric': metric, 'n_seed': len(v),
                              'mpgts_mean': v[metric].mean(), 'other_mean': o[metric].mean(),
-                             't': t, 'p': pval})
+                             't': t, 'p': pval, 'best_baseline': solver == best,
+                             'significant': pval < ALPHA / len(others)})
     out = pd.DataFrame(rows)
     path = os.path.join(args.csv_dir, 'welch.csv')
     out.to_csv(path, index=None, float_format='%.4g')

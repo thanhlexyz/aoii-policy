@@ -1,7 +1,7 @@
 # aoii-dataset: AoII-aware randomized sampling over an IRSA uplink, replayed
 # on the Berkeley, BTS and SINDIT sensor traces.
 PY       ?= python3
-DATASETS ?= berkeley bts sindit synthetic
+DATASETS ?= synthetic berkeley bts sindit
 SOLVERS  ?= reactive random hybrid threshold ucb vhct mpgts
 # the proposed policy closes a feedback round every 25 slots (the per-device
 # learners keep the 100-slot round of their original protocol)
@@ -167,8 +167,8 @@ ota-calib:
 # pluto transmit gain (an attenuation), read off the calibration plateau
 OTA_STEP     ?= 2000
 OTA_POWER    ?= -25
-OTA_DATASETS ?= sindit berkeley
-OTA_SEEDS    ?= $(SEEDS)
+OTA_DATASETS ?= berkeley sindit
+OTA_SEEDS    ?= 0 1 2 3 4
 ota:
 	$(foreach d,$(OTA_DATASETS),$(foreach k,$(OTA_SEEDS),$(foreach s,$(SOLVERS),\
 	  $(RUN) --scenario=solve --channel=ota --dataset=$(d) --solver=$(s) --seed=$(k) --n_step=$(OTA_STEP) --tag=_ota $(EXTRA_$(s)) \

@@ -2,7 +2,8 @@ import argparse
 import torch
 import os
 
-DATASETS = ['berkeley', 'bts', 'sindit', 'synthetic']
+# the order of every table and figure: the generated trace first
+DATASETS = ['synthetic', 'berkeley', 'bts', 'sindit']
 SOLVERS  = ['random', 'reactive', 'hybrid', 'threshold', 'ucb', 'vhct', 'mpgts']
 CHANNELS = ['ideal', 'software', 'ota']
 
