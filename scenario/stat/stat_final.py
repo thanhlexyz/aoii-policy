@@ -114,13 +114,13 @@ def main_table(agg, df, args):
                 stats.ttest_ind(v, o, equal_var=False).pvalue < ALPHA / len(means) else ''
             gains.append(f'{gain:+.0f}\\%{star}')
         rows.append(r'      \midrule')
-        rows.append(r'      \textit{reward gain} & ' + ' & '.join(gains) + r' \\')
+        rows.append(r'      \textit{gain} & ' + ' & '.join(gains) + r' \\')
     tex = r"""\newcommand{\maintable}{%
   \begin{table}[t]
     \centering
     \caption{Steady-state AoII per policy, sorted from worst to best (mean $\pm$ standard deviation over """ + seeds_in_words(df) + r""" seeds on the final 1000 slots; best in bold, $\dagger$: differs from the runner-up at $p < """ + f'{ALPHA:g}' + r""" $, Welch's $t$-test); last row: reward gain of \tool over the best baseline, $*$: significant at the Bonferroni level.}
     \label{tab:main}
-    \setlength{\tabcolsep}{1pt}\scriptsize
+    \setlength{\tabcolsep}{0pt}\scriptsize
     \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}l""" + 'r' * len(datasets) + r"""@{}}
       \toprule
       \textbf{Policy} & """ + ' & '.join(rf'\texttt{{{NAME[d]}}}' for d in datasets) + r""" \\

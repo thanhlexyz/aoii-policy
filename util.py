@@ -60,15 +60,39 @@ def get_args():
     # product of these candidate grids (a single value fixes a parameter) at
     # the base station (cucb, cvhct) or per device (ucb, vhct), or fixed to
     # the first value of each grid (none); mpgts_log searches the X-armed
-    # bandit's domain on a log scale
-    parser.add_argument('--mpgts_q_grid', type=str, default='0.02,0.05,0.1')
-    parser.add_argument('--mpgts_n_grid', type=str, default='1,3,5')
+    # bandit's domain on a log scale. The repeat probability is fixed at the
+    # top of its range: the recovery rate of eq. (repair) increases in q while
+    # the cost of the repeats is bounded by n_r per trigger, so the base
+    # station learns (n_r, x_bg) over eight candidates; the 36-schedule grid
+    # that also learns q is the `_q` ablation
+    parser.add_argument('--mpgts_q_grid', type=str, default='0.1')
+    parser.add_argument('--mpgts_n_grid', type=str, default='3,5')
     parser.add_argument('--mpgts_bg_grid', type=str, default='0,0.002,0.01,0.03')
     parser.add_argument('--mpgts_learn', type=str, default='ts', choices=['none', 'ts', 'cucb', 'cvhct', 'ucb', 'vhct'])
     parser.add_argument('--mpgts_log', type=int, default=0, choices=[0, 1])
     # posterior scale of the Thompson learner: robust (median absolute
     # deviation) or the plain standard deviation
     parser.add_argument('--mpgts_scale', type=str, default='mad', choices=['mad', 'std'])
+    # what the AoII of an error period is charged to: the schedule the device
+    # held when the period began (onset) or whichever it holds each round
+    # held when the period began (onset), whichever it holds each round
+    # (round), or the recovery rate and cost it shows while holding devices,
+    # mapped to AoII through the two-state chain (model)
+    # mapped to AoII through the two-state chain (model), or the schedule it
+    # held when the period began, which it keeps until it recovers (hold)
+    # or the AoII accrued since the start of the round only (local)
+    parser.add_argument('--mpgts_credit', type=str, default='round', choices=['round', 'local', 'hold', 'model', 'onset'])
+    # subtract the round's mean reward over the devices before crediting
+    parser.add_argument('--mpgts_baseline', type=int, default=0, choices=[0, 1])
+    # device-rounds every schedule is credited, spread over the devices, before
+    # the posterior sampling takes over
+    parser.add_argument('--mpgts_warm', type=int, default=16)
+    # truncate rewards below this running quantile (0 = plain mean)
+    parser.add_argument('--mpgts_clip', type=float, default=0.0)
+    # hold credit: rounds a device in error keeps its schedule for (0 = until recovery)
+    parser.add_argument('--mpgts_hold', type=int, default=0)
+    # model credit: device-slots per observation the Beta posteriors count
+    parser.add_argument('--mpgts_temper', type=float, default=25.0)
     parser.add_argument('--tag', type=str, default='')
     # dataset
     parser.add_argument('--dataset', type=str, default='berkeley', choices=DATASETS)

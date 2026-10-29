@@ -15,8 +15,11 @@ stale), `random` (a fixed rate that maximizes IRSA throughput), `hybrid`
 `threshold` (send once a local AoII proxy crosses a threshold), `ucb` and
 `vhct` (reactive plus a uniform supplement learned per device by UCB1 or an
 X-armed bandit), and `mpgts` (MPGTS), the proposed policy: reactive plus proactive retransmission
-(spread repeats of the record after every trigger) plus a background rate
-the base station learns via multiple-play Thompson sampling and broadcasts each round.
+(spread repeats of the record after every trigger, with probability 0.1 per
+slot) plus a background rate; the base station learns the repeat budget and
+the background rate (8 candidate schedules) via multiple-play Thompson
+sampling (after a warm-up of 16 device-rounds per schedule, spread over the
+devices) and broadcasts each device's schedule every 100-slot round.
 
 The uplink itself has two backends. `ideal` counts slot occupancy. `software`
 and `ota` build a real OFDM waveform, decode a CRC, and cancel what they

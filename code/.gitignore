@@ -1,0 +1,47 @@
+# Ignore __pycache__ folder recursively
+**/__pycache__
+*.pyc
+data/
+
+# LaTeX intermediate files
+*.aux
+*.log
+*.toc
+*.out
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# Bibliography files
+*.bbl
+*.bcf
+
+# Temporary files created by LaTeX editors
+*.dvi
+*.ps
+*.xdv
+*.epub
+
+# Backup files
+*~
+
+# Editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Latexmk specific files
+latexmkrc
+
+# Ignore folders
+temp/
+output/
+
+# Custom files
+*.pdfsync
+
+# simulation output
+result/

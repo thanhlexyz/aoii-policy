@@ -3,9 +3,9 @@
 PY       ?= python3
 DATASETS ?= synthetic berkeley bts sindit
 SOLVERS  ?= reactive random hybrid threshold ucb vhct mpgts
-# the proposed policy closes a feedback round every 25 slots (the per-device
-# learners keep the 100-slot round of their original protocol)
-EXTRA_mpgts = --round_interval=25
+# every learner closes a feedback round every 100 slots (the default); the
+# 25-slot round of the proposed policy is the `_N25` ablation
+EXTRA_mpgts =
 RUN       = $(PY) main.py --no_progress_bar --device=cpu
 
 all: run summary plots
@@ -51,21 +51,22 @@ results: summary
 	$(PY) main.py --scenario=make_figures
 
 # ---------------- ablation of the proposed policy (RQ2) ----------------
-# what each ingredient buys: which parameters of the schedule are learned, the
-# repeats, the background, the learner and its scale, and the round length
-ABLATION = _bgonly:--mpgts_q_grid=0.05,--mpgts_n_grid=3 _qbg:--mpgts_n_grid=3 \
-           _fixed:--mpgts_learn=none,--mpgts_q_grid=0.05,--mpgts_n_grid=3,--mpgts_bg_grid=0.01 \
+# what each ingredient buys: which parameters of the schedule are learned (the
+# `_q` variant is the 36-schedule grid that learns q as well), the repeats,
+# the background, the learner and its scale, and the round length; flags of
+# one variant are joined by '+'
+ABLATION = _bgonly:--mpgts_n_grid=5 _q:--mpgts_q_grid=0.02,0.05,0.1+--mpgts_n_grid=1,3,5 \
+           _fixed:--mpgts_learn=none+--mpgts_n_grid=5+--mpgts_bg_grid=0.01 \
            _nobg:--mpgts_bg_grid=0 _norepeat:--mpgts_n_grid=0 \
-           _std:--mpgts_scale=std _ucb:--mpgts_learn=cucb _cvhct:--mpgts_learn=cvhct,--mpgts_log=1 _device:--mpgts_learn=ucb \
-           _N100:--round_interval=100
+           _std:--mpgts_scale=std _ucb:--mpgts_learn=cucb _cvhct:--mpgts_learn=cvhct+--mpgts_log=1 _device:--mpgts_learn=ucb \
+           _N25:--round_interval=25
 ablation:
 	$(foreach d,$(DATASETS),$(foreach k,$(SEEDS),$(foreach a,$(ABLATION),\
 	  $(RUN) --scenario=solve --dataset=$(d) --solver=mpgts --seed=$(k) $(EXTRA_mpgts) \
-	         $(subst $(comma), ,$(word 2,$(subst :, ,$(a)))) --tag=$(word 1,$(subst :, ,$(a))) & ))) \
+	         $(subst +, ,$(word 2,$(subst :, ,$(a)))) --tag=$(word 1,$(subst :, ,$(a))) & ))) \
 	wait
 	$(PY) main.py --scenario=stat_ablation
 
-comma := ,
 
 # ---------------- round-3 protocol checks ----------------
 # causal normalization: scale from the first 10% of the run only

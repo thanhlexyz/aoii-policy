@@ -1,0 +1,17 @@
+name = "tool"
+version = "0.1.0"
+packagesDir = "/home/thanh/.cache/lake/packages"
+defaultTargets = ["Proof"]
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.33.1"
+
+# One file per part of the convergence theorem of the paper: the AoII chain
+# of a device under a retransmission schedule, the stability of a finite
+# argmax under converging scores, and the consistency of the learned schedule.
+[[lean_lib]]
+name = "Proof"
+srcDir = "."
+globs = ["Model", "Stability", "Consistency"]

@@ -1,0 +1,23 @@
+\newcommand{\maintable}{%
+  \begin{table}[t]
+    \centering
+    \caption{Steady-state AoII per policy, sorted from worst to best (mean $\pm$ standard deviation over ten seeds on the final 1000 slots; best in bold, $\dagger$: differs from the runner-up at $p < 0.01 $, Welch's $t$-test); last row: reward gain of \tool over the best baseline, $*$: significant at the Bonferroni level.}
+    \label{tab:main}
+    \setlength{\tabcolsep}{1pt}\scriptsize
+    \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}lrrrr@{}}
+      \toprule
+      \textbf{Policy} & \texttt{Synthetic} & \texttt{Berkeley} & \texttt{BTS} & \texttt{SINDIT} \\
+      \midrule
+      \textsc{Reactive} & $126{\pm}68$ & $241{\pm}127$ & $133{\pm}41$ & $1613{\pm}668$ \\
+      \textsc{Threshold} & $3.1{\pm}2.3$ & $93{\pm}206$ & $69{\pm}69$ & $744{\pm}805$ \\
+      \textsc{Hybrid} & $11{\pm}6$ & $0.498{\pm}0.264$ & $13{\pm}2$ & $0.0024{\pm}0.0035$ \\
+      \textsc{VHCT} & $0.141{\pm}0.067$ & $0.046{\pm}0.016$ & $0.494{\pm}0.176$ & $0.0011{\pm}0.0018$ \\
+      \textsc{Throughput} & $0.129{\pm}0.021$ & $0.040{\pm}0.007$ & $0.502{\pm}0.093$ & $0.0010{\pm}0.0009$ \\
+      \tool (ours) & $\mathbf{0.048{\pm}0.028}$$^{\dagger}$ & $0.057{\pm}0.071$ & $\mathbf{0.277{\pm}0.206}$ & $0.0015{\pm}0.0031$ \\
+      \textsc{UCB} & $0.121{\pm}0.050$ & $\mathbf{0.034{\pm}0.012}$ & $0.676{\pm}0.457$ & $\mathbf{0.0003{\pm}0.0003}$ \\
+      \midrule
+      \textit{reward gain} & +43\%$^{*}$ & +8\% & +38\% & +7\% \\
+      \bottomrule
+    \end{tabular*}
+  \end{table}%
+}

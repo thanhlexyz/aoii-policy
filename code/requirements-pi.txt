@@ -1,0 +1,4 @@
+# Raspberry Pi driving the ADALM-Pluto radios. Deliberately torch-free.
+numpy
+pyadi-iio
+scipy

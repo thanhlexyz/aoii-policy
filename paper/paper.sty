@@ -1,0 +1,76 @@
+% \LoadClass[conference]{IEEEtran}
+
+% From template
+\IEEEoverridecommandlockouts
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% Citation
+\usepackage[sorting=none,style=ieee,doi=false,url=false,isbn=false,eprint=false,maxbibnames=6,minbibnames=3]{biblatex}
+\addbibresource{paper.bib}
+\usepackage{etoolbox}
+\newcommand{\citeoneauthor}[1]{%
+  \ifnumequal{\value{liststop}}{1}%
+    {\citeauthor{#1}}%
+    {\citeauthor*{#1}}%
+}
+\renewcommand*{\bibfont}{\footnotesize}
+\setlength{\bibitemsep}{0pt}
+
+% Math
+\let\proof\relax\let\endproof\relax
+\usepackage{amsmath,amssymb,amsfonts,amsthm,bbm}
+
+% Algorithm
+\usepackage{algorithmic}
+\usepackage{algorithm}
+
+% Figure
+\usepackage{graphicx}
+\usepackage[caption=false,font=footnotesize]{subfig}
+
+% Dont know
+\usepackage{textcomp}
+
+% Text color
+\usepackage{xcolor}
+
+% Table
+\usepackage{booktabs}
+\usepackage{multirow}
+
+% Tool macro
+\usepackage{xspace}
+\newcommand{\tool}{\textsc{Mpgts}\xspace}
+
+% For referencing names
+\usepackage[draft,bookmarks=false]{hyperref}
+\renewcommand{\figurename}{Fig.}
+\newcommand{\equationname}{Eq.}
+\newcommand{\algorithmname}{Alg.}
+\renewcommand{\figureautorefname}{Fig.}
+\renewcommand{\tableautorefname}{Tab.}
+\renewcommand{\sectionautorefname}{Sec.}
+\renewcommand{\subsectionautorefname}{Sec.}
+\renewcommand{\subsubsectionautorefname}{Sec.}
+\providecommand{\algorithmautorefname}{Alg.}
+
+% Highlighting
+\usepackage{soul}
+
+% Theorems and Assumptions (amsthm style)
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\theoremstyle{definition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{problem}{Problem}
+
+% Drawing tikz
+\usepackage{tikz}
+\usetikzlibrary{automata,arrows,positioning,calc}
+
+% Comments
+\newtoggle{usecomment}
+\settoggle{usecomment}{true}
+\newcommand{\tl}[1]{\iftoggle{usecomment}{{\color{blue}{[TL]: #1}}}{}}
+\newcommand{\yj}[1]{\iftoggle{usecomment}{{\color{yellow}{[YJ]: #1}}}{}}

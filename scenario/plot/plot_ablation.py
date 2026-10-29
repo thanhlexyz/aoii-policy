@@ -8,7 +8,7 @@ from .plot_panel import COLUMN_IN, PAPER_STYLE
 from . import common
 
 # the variants the text of RQ2 discusses; ablation.csv keeps every variant
-SHOWN = {'': r'\textsc{Mpgts} (full policy)', '_norepeat': 'no repeats', '_nobg': 'no background',
+SHOWN = {'': r'\textsc{Mpgts} (full policy)', '_q': 'learn $q$ as well', '_norepeat': 'no repeats', '_nobg': 'no background',
          '_std': 'std.\\ dev.\\ instead of robust scale', '_ucb': 'UCB1, one arm per round'}
 
 NAMES = {'synthetic': 'Synthetic', 'berkeley': 'Berkeley', 'bts': 'BTS', 'sindit': 'SINDIT'}

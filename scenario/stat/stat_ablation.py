@@ -8,9 +8,9 @@ from .stat_final import tail_metrics
 
 # tag -> label, in the order the figure lists them. The empty tag is the full
 # policy from `make run`; the rest come from `make ablation`.
-VARIANTS = [('',          'full policy: TS over $(q, n_r, x_{\\mathrm{bg}})$'),
+VARIANTS = [('',          'full policy: TS over $(n_r, x_{\\mathrm{bg}})$'),
             ('_bgonly',   'learn $x_{\\mathrm{bg}}$ only'),
-            ('_qbg',      'learn $(q, x_{\\mathrm{bg}})$ only'),
+            ('_q',        'learn $q$ as well (36 schedules)'),
             ('_fixed',    'fixed schedule'),
             ('_norepeat', 'no repeats'),
             ('_nobg',     'no background'),
@@ -18,7 +18,7 @@ VARIANTS = [('',          'full policy: TS over $(q, n_r, x_{\\mathrm{bg}})$'),
             ('_ucb',      'UCB, one arm per round'),
             ('_cvhct',    'VHCT at base station'),
             ('_device',   'UCB per device'),
-            ('_N100',     'round $N = 100$')]
+            ('_N25',      'round $N = 25$')]
 
 def stat_ablation(args):
     """RQ2: what each ingredient of the proposed policy buys, on its own."""
