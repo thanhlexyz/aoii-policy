@@ -11,7 +11,7 @@ from .stat_final import tail_metrics
 VARIANTS = [('',          'full policy: TS over $(n_r, x_{\\mathrm{bg}})$'),
             ('_bgonly',   'learn $x_{\\mathrm{bg}}$ only'),
             ('_q',        'learn $q$ as well (36 schedules)'),
-            ('_fixed',    'fixed schedule'),
+            ('_fixed',    'fixed schedule $(5, 0.01)$'),
             ('_norepeat', 'no repeats'),
             ('_nobg',     'no background'),
             ('_std',      'std. dev. instead of robust scale'),

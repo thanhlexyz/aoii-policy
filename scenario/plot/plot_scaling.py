@@ -8,12 +8,12 @@ from . import common
 
 ORDER = ['reactive', 'threshold', 'hybrid', 'random', 'ucb', 'vhct', 'mpgts']
 
-PANEL_IN = (COLUMN_IN / 2, 1.3)   # one subfigure of the paper
+PANEL_IN = (COLUMN_IN / 3 - 0.02, 1.25)   # one of three subfigures in a row
 
 def _sensors_axis(ax, Ks):
     ax.set_xscale('log', base=2)
     ax.set_xticks(Ks); ax.set_xticklabels([str(k) for k in Ks]); ax.minorticks_off()
-    ax.set_xlabel('sensors $K$ ($M = K/6$)', labelpad=1)
+    ax.set_xlabel('sensors $K$', labelpad=1)
     ax.grid(lw=0.3, alpha=0.4)
 
 def _save(fig, out_dir, name):
@@ -24,11 +24,12 @@ def _save(fig, out_dir, name):
     return path
 
 def plot_scaling(args, out_dir=None):
-    """Scaling figure, as three PDFs the paper places with subfigures:
+    """Scaling figure, as four PDFs the paper places with subfigures:
     plot_scaling_reward.pdf, reward per policy against the number of sensors K
     (M = K / 6); plot_scaling_consensus.pdf, the rounds the proposed learner
     needs before 80% of the devices share one schedule, one box per K over the
-    seeds; and plot_scaling_legend.pdf, the policy legend spanning both."""
+    seeds; plot_scaling_load.pdf, the offered load G per policy; and
+    plot_scaling_legend.pdf, the policy legend spanning all three."""
     out_dir = out_dir or os.path.join(args.paper_figure_dir, 'simulation')
     sc = pd.read_csv(os.path.join(args.csv_dir, 'scaling.csv'))
     Ks = sorted(sc.K.unique())
@@ -66,6 +67,22 @@ def plot_scaling(args, out_dir=None):
         _sensors_axis(ax, Ks)
         fig.tight_layout(pad=0.2)
         _save(fig, out_dir, 'plot_scaling_consensus.pdf')
+
+        # the offered load per policy: M = K / 6 holds the per-slot budget, so a
+        # policy that keeps its load flat in K scales its channel use with K
+        fig, ax = plt.subplots(figsize=PANEL_IN)
+        for solver in ORDER:
+            d = sc[sc.solver == solver].sort_values('K')
+            if d.empty: continue
+            ours = solver == 'mpgts'
+            st = common.SOLVER_STYLE[solver]
+            ax.errorbar(d.K, d.load, yerr=d.load_std, color=st['color'], marker=st['marker'], ls=st['ls'],
+                        ms=5 if ours else 2.8, lw=1.4 if ours else 0.8, capsize=1.2, zorder=3 if ours else 2)
+        ax.set_ylim(0, 0.7)
+        ax.set_ylabel('offered load $G$', labelpad=2)
+        _sensors_axis(ax, Ks)
+        fig.tight_layout(pad=0.2)
+        _save(fig, out_dir, 'plot_scaling_load.pdf')
 
         fig = plt.figure(figsize=(COLUMN_IN, 0.3))
         fig.legend(handles, labels, ncol=4, loc='center', handlelength=2.6, columnspacing=0.8,

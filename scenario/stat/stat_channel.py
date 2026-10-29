@@ -29,8 +29,8 @@ def stat_channel(args):
     df  = pd.DataFrame(rows)
     agg = (df.groupby(['dataset', 'solver', 'channel'], sort=False)
              .agg(n_seed=('seed', 'count'), n_step=('n_step', 'max'),
-                  avg_aoii=('avg_aoii', 'mean'),
-                  utilization=('utilization', 'mean'),
+                  avg_aoii=('avg_aoii', 'mean'), avg_aoii_std=('avg_aoii', 'std'),
+                  utilization=('utilization', 'mean'), utilization_std=('utilization', 'std'),
                   p_success=('p_success', 'mean'),
                   reward=('reward', 'mean'), reward_std=('reward', 'std'))
              .reset_index())

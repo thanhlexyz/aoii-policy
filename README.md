@@ -85,3 +85,5 @@ make ota                        # the policies, over the air
 Transmit power means a dB SNR on the software channel and a Pluto transmit
 gain (an attenuation, never positive) on the radios. `make ota-calib` is what
 maps one onto the other; read the operating point off its plateau.
+
+`make fixed` runs each of the eight candidate schedules fixed for the whole run (learner off, 10 seeds, 4 traces) and writes `result/csv/fixed_schedules.csv`, `fixed_best.csv` and `fixed_worst.csv`: the hindsight-best schedule per trace by reward, the cost of carrying it to the other traces, and \tool on the same scale (RQ2).

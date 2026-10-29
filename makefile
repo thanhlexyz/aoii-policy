@@ -42,6 +42,7 @@ summary:
 # every csv summary and ../paper/figure table the paper quotes, then the figures
 results: summary
 	$(PY) main.py --scenario=stat_ablation
+	$(PY) main.py --scenario=stat_fixed
 	$(PY) main.py --scenario=stat_robustness
 	$(PY) main.py --scenario=stat_subsets
 	$(PY) main.py --scenario=stat_round_interval
@@ -67,6 +68,16 @@ ablation:
 	wait
 	$(PY) main.py --scenario=stat_ablation
 
+# hindsight reference for RQ2: each candidate schedule of the proposed policy
+# fixed for the whole run (the learner off); stat_fixed ranks them per trace
+FIXED_N  ?= 3 5
+FIXED_BG ?= 0 0.002 0.01 0.03
+fixed:
+	$(foreach d,$(DATASETS),$(foreach n,$(FIXED_N),$(foreach b,$(FIXED_BG),$(foreach k,$(SEEDS),\
+	  $(RUN) --scenario=solve --dataset=$(d) --solver=mpgts --seed=$(k) --mpgts_learn=none \
+	         --mpgts_n_grid=$(n) --mpgts_bg_grid=$(b) --tag=_fix_n$(n)_bg$(b) & )))) \
+	wait
+	$(PY) main.py --scenario=stat_fixed
 
 # ---------------- round-3 protocol checks ----------------
 # causal normalization: scale from the first 10% of the run only

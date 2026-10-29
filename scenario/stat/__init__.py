@@ -12,3 +12,4 @@ from .stat_autocorr_per_dataset import stat_autocorr_per_dataset
 from .stat_autocorr_per_sensor import stat_autocorr_per_sensor
 from .stat_final import stat_final
 from .stat_scaling import stat_scaling
+from .stat_fixed import stat_fixed

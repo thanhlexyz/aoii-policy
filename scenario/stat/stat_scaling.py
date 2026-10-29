@@ -39,7 +39,8 @@ def stat_scaling(args):
     df  = pd.DataFrame(rows)
     df.to_csv(os.path.join(args.csv_dir, 'scaling_per_seed.csv'), index=None, float_format='%.6f')
     agg = (df.groupby(['solver', 'K'], sort=False)
-             .agg(n_seed=('seed', 'count'), avg_aoii=('avg_aoii', 'mean'), load=('utilization', 'mean'),
+             .agg(n_seed=('seed', 'count'), avg_aoii=('avg_aoii', 'mean'), avg_aoii_std=('avg_aoii', 'std'),
+                  load=('utilization', 'mean'), load_std=('utilization', 'std'),
                   p_success=('p_success', 'mean'), reward=('reward', 'mean'), reward_std=('reward', 'std'),
                   rounds_to_agree=('rounds_to_agree', 'mean'),
                   rounds_to_agree_std=('rounds_to_agree', 'std')).reset_index())
