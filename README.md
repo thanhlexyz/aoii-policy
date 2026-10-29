@@ -1,89 +1,140 @@
-# AoII over a grant-free IRSA uplink, replayed on real IoT sensor traces
+# AoII-aware status updating over a feedback-free IRSA uplink
 
-Thirty devices share five grant-free uplink channels through one base station.
-Collisions are destructive, there is no per-packet acknowledgement, and every
-device picks a randomized transmission probability to keep the base station's
-estimate of it both fresh and correct -- the age of incorrect information. The
-ground truth each device reports is a real sensor trace (Intel Berkeley, BTS,
-SINDIT) replayed as a zero-order hold, or the generated `synthetic` trace whose
-streams encode one property each (persistent error states, load, drift, correlated
-bursts) with a regime change halfway.
+Code for the paper *An AoII Minimization Policy for IoT Sensor Traffic*.
 
-Seven policies are compared: `reactive` (send whenever the local estimate is
-stale), `random` (a fixed rate that maximizes IRSA throughput), `hybrid`
-(reactive plus a fixed supplement sized to the leftover load budget),
-`threshold` (send once a local AoII proxy crosses a threshold), `ucb` and
-`vhct` (reactive plus a uniform supplement learned per device by UCB1 or an
-X-armed bandit), and `mpgts` (MPGTS), the proposed policy: reactive plus proactive retransmission
-(spread repeats of the record after every trigger, with probability 0.1 per
-slot) plus a background rate; the base station learns the repeat budget and
-the background rate (8 candidate schedules) via multiple-play Thompson
-sampling (after a warm-up of 16 device-rounds per schedule, spread over the
-devices) and broadcasts each device's schedule every 100-slot round.
+Thirty IoT sensors share a grant-free IRSA uplink without per-packet acknowledgements.
+Each sensor replays a real sensor trace (Intel Berkeley, BTS, SINDIT) or a generated trace (Synthetic) as ground truth, and the base station keeps an estimate of each one.
+The metric is the age of incorrect information (AoII).
 
-The uplink itself has two backends. `ideal` counts slot occupancy. `software`
-and `ota` build a real OFDM waveform, decode a CRC, and cancel what they
-decoded -- in a software channel or on ADALM-Pluto radios.
+Seven policies are compared:
 
-## Layout
+| Name in code | Name in paper | What it does |
+|---|---|---|
+| `reactive` | Reactive | sends when the reading leaves the local record by more than epsilon |
+| `threshold` | Threshold | sends once a local AoII proxy exceeds tau |
+| `random` | Throughput | sends at the fixed rate that maximizes IRSA throughput |
+| `hybrid` | Hybrid | Reactive plus a fixed supplement sized to the leftover load |
+| `ucb` | UCB | Reactive plus a supplement learned per device by UCB1 over a grid |
+| `vhct` | VHCT | Reactive plus a supplement learned per device by an X-armed bandit |
+| `mpgts` | Mpgts (ours) | event trigger, proactive retransmissions and a background rate; the base station learns the retransmission schedule by multiple-play Gaussian Thompson sampling |
 
-- `main.py`, `util.py` -- CLI entry point; every knob and its per-dataset default.
-- `simulator/env.py` -- the slot loop: sample the sources, contend, age the estimates.
-- `simulator/irsa.py` -- replication patterns and the ideal collision channel.
-- `simulator/solver/` -- the seven policies; `base/` holds the shared test loop.
-- `simulator/normalizer/` -- raw logs to one `timestamp,value` CSV per sensor.
-- `scenario/` -- what `--scenario` dispatches to: `solve`, `normalize`, `ota_calib`,
-  `stat/` (trace statistics and result tables), `plot/` (figures).
-- `sdr/` -- IRSA frames on a waveform: `irsa.py` (encode and cancel), `link.py`
-  (radios or software), `server.py` (the JSON-lines slot server).
-- `pysdr/` -- OFDM modem and Pluto drivers, from the wireless-pgd testbed.
-- `ref/irsa/` -- a third-party IRSA implementation, kept for reference only.
-- `lean/` -- machine-checked proofs behind the convergence theorem of the paper (`make proof`).
-- `data/<dataset>/` -- normalized traces (gitignored); `result/` -- csv and figures.
+The uplink has two backends in the paper: `ideal` counts slot occupancy and `ota` runs the OFDM waveform on ADALM-Pluto radios. A third, `software`, passes the same waveform through a software channel and only serves to check the radio code without radios.
 
-## Install
+## Directory structure
 
-```bash
-python3 -m pip install -r requirements.txt      # workstation
-python3 -m pip install -r requirements-pi.txt   # the pi driving the radios
+```
+.
+├── core
+│   ├── main.py                  entry point: python3 main.py --scenario=<name> ...
+│   ├── makefile                 one target per experiment of the paper
+│   ├── util.py                  every argument and its default
+│   ├── simulator
+│   │   ├── env.py               the slot loop: sources, contention, estimates, AoII
+│   │   ├── irsa.py              replica patterns and the SIC decoder
+│   │   ├── time_series.py       trace replay (zero-order hold, normalization)
+│   │   ├── monitor.py           per-slot csv logging
+│   │   ├── normalizer           raw traces to one csv per sensor
+│   │   └── solver               the seven policies; mpgts/learner.py holds the bandit learners
+│   ├── scenario
+│   │   ├── solve.py             one run
+│   │   ├── normalize.py         builds data/data/<dataset>/
+│   │   ├── ota_calib.py         delivery against transmit power, software or radios
+│   │   ├── stat                 per-run csvs to the summaries and Table I
+│   │   └── plot                 Fig. 4, 5 and 6
+│   ├── sdr                      IRSA frames on the OFDM waveform, radio server
+│   └── pysdr                    OFDM modem and Pluto drivers
+├── lean                         Lean 4 proofs of Theorem 1
+├── data                         (not in git) inputs, results and figures
+│   ├── data                     raw/ and the normalized traces berkeley/, bts/, sindit/, synthetic/
+│   ├── csv                      test/ holds one csv per run; the summaries sit next to it
+│   └── figure                   tab-main.tex and simulation/*.pdf
+├── README.md
+├── requirements.txt             workstation
+└── requirements-pi.txt          Raspberry Pi that drives the radios
 ```
 
-`data/` holds the normalized traces. To rebuild them from raw logs, put
-`data/raw/berkeley/raw.csv` (`moteid,timestamp,temperature,humidity,light,voltage`),
-`data/raw/bts/raw.csv` (`station_id,parameter_id,reading_time,value`) and
-`data/raw/sindit/*.csv` (`time,value`, one file per sensor) in place and run
-`make prepare`. That wipes `data/<dataset>/` first. The synthetic trace needs
-no raw input: `python3 main.py --scenario=normalize --dataset=synthetic`
-regenerates it from `simulator/normalizer/synthetic/` (seeded).
+Every command below runs from `core/`.
 
-## Reproduce
+## Installation
 
 ```bash
-make stat_sensor stat_dataset   # trace statistics
-make run                        # 3 datasets x 7 policies x 5 seeds (RQ1)
-make ablation                   # ingredients of the proposed policy (RQ2)
-make causal frozen robustness subsets round_interval   # protocol variations (RQ3)
-make scaling                    # 30 to 240 sensors on the synthetic trace
-make ota-sw                     # the software waveform channel (RQ4)
-make results                    # every csv summary, ../paper/figure/tab-main.tex
-                                # and the RQ2-RQ4 figures under ../paper/figure/simulation/
+pip3 install -r requirements.txt
 ```
 
-Over the air, three Plutos on a Raspberry Pi reachable as `pi5`: the device
-under test (`ota_tx_uri`), the mass of the other devices (`ota_crowd_uri`) and
-the base station (`ota_rx_uri`). Pointing the first two at one radio puts every
-device on a single transmitter, which is what a bench with one good path
-supports.
+Then install PyTorch from the [PyTorch installation guide](https://pytorch.org/get-started/locally/).
+The experiments ran on a Linux machine with an AMD Ryzen 9 5900X (12 cores, 24 threads) and 128 GB RAM, using Python 3.10, PyTorch 2.13, NumPy 2.2 and PyXAB 0.3.
+Every simulation runs on the CPU (`--device=cpu`).
+
+The proofs need Lean 4 `v4.33.1` with Mathlib, see `lean/README.md`.
+
+The radio experiments need a Raspberry Pi 5 with three ADALM-Pluto radios and `pip3 install -r requirements-pi.txt` on the Pi.
+
+## Data
+
+Every experiment reads the normalized traces in `data/data/<dataset>/`: one `<sensor_id>.csv` per sensor with columns `timestamp,value`, an `index.csv` and a `min_timestamp.txt`.
+They are built from the raw traces by
 
 ```bash
-make ota-sw ota-sw-calib        # software loopback -- run this first, no radios
-make ota-sync                   # push pysdr/ and sdr/ to the pi
-make ota-calib                  # delivery rate against transmit gain
-make ota                        # the policies, over the air
+make prepare      # wipes and rebuilds data/data/<dataset>/ for every dataset
 ```
 
-Transmit power means a dB SNR on the software channel and a Pluto transmit
-gain (an attenuation, never positive) on the radios. `make ota-calib` is what
-maps one onto the other; read the operating point off its plateau.
+The raw traces are not in this repository. Place them as follows:
 
-`make fixed` runs each of the eight candidate schedules fixed for the whole run (learner off, 10 seeds, 4 traces) and writes `result/csv/fixed_schedules.csv`, `fixed_best.csv` and `fixed_worst.csv`: the hindsight-best schedule per trace by reward, the cost of carrying it to the other traces, and \tool on the same scale (RQ2).
+| Dataset | Source | Raw layout |
+|---|---|---|
+| Berkeley | Intel Berkeley Research Lab sensor data, db.csail.mit.edu/labdata | `data/data/raw/berkeley/raw.csv` with columns `moteid,timestamp,temperature,humidity,light,voltage` |
+| BTS | smart-building and environmental telemetry, Truong and Trang, IEEE Big Data 2022 | `data/data/raw/bts/raw.csv` with columns `station_id,parameter_id,reading_time,value` |
+| SINDIT | industrial digital-twin telemetry of Nguyen et al., IEEE COMPSAC 2024 | `data/data/raw/sindit/<sensor>.csv`, one file per sensor with columns `time,value` |
+| Synthetic | generated by `simulator/normalizer/synthetic/` from a fixed seed | none |
+
+The slot interval of each trace is its median inter-event time (Sec. IV-A):
+
+```bash
+make stat_dataset
+```
+
+## How to reproduce the paper
+
+Each target runs its seeds in parallel, writes one csv per run to `data/csv/test/` and, where it has one, the summary csv to `data/csv/`.
+Simulations use ten seeds, `SEEDS=0..9`; the radios use five.
+Every baseline uses one setting for all traces. Threshold's (tau, rho) is chosen once by `make threshold` on the first 40% of each run, disjoint from the final 1000 slots every result is scored on, and is the default in `util.py`.
+
+| Paper result | Command | Runs | Summary |
+|---|---|---|---|
+| Threshold's (tau, rho), one pair for every trace | `make threshold` | 320 | `threshold_tuning.csv` |
+| Table I, RQ1 | `make run summary` | 280 | `summary.csv`, `wilcoxon.csv`, `figure/tab-main.tex` |
+| Fig. 4, RQ2 ablation | `make ablation` | 400 | `ablation.csv` |
+| RQ2 fixed-schedule reference | `make fixed` | 320 | `fixed_schedules.csv`, `fixed_best.csv`, `fixed_worst.csv` |
+| RQ3 protocol variations | `make causal frozen robustness subsets` | 3410 | `robustness.csv`, `subsets.csv` |
+| Fig. 5, RQ3 scaling | `make scaling` | 280 | `scaling.csv`, `scaling_per_seed.csv` |
+| Fig. 6, RQ4 slot occupancy against radios | `make ota-sync ota-calib ota` | 105 | `channel.csv`, `ota_calib_ota.csv` |
+| Theorem 1 | `make proof` | | prints the axioms of every theorem |
+
+Then regenerate every summary, Table I and Fig. 4 to 6 from the runs on disk, and copy them into the paper:
+
+```bash
+make results      # data/csv/*.csv, data/figure/tab-main.tex, data/figure/simulation/*.pdf
+make paper        # copies them to ../../paper/figure/ (set PAPER=<dir> to change)
+```
+
+`make all` runs `run` and `results`.
+
+### Radios
+
+Three Plutos hang off a Raspberry Pi reachable as `pi5`: one transmits for the device under test (`--ota_tx_uri`), one emulates the other devices (`--ota_crowd_uri`), and one is the base station (`--ota_rx_uri`).
+Check the radio code without radios first, then push it to the Pi, calibrate the transmit gain, and run:
+
+```bash
+make ota-sw-calib             # no radios: checks the radio code through a software channel
+make ota-sync                 # copies pysdr/ and sdr/ to ~/aoii-dataset on the Pi
+make ota-calib                # delivery against Pluto transmit gain
+make ota                      # 3 traces x 7 policies x 5 seeds, one run at a time
+```
+
+`PI`, `PI_DIR`, `PI_PY` and `OTA_POWER` in the makefile set the host, the remote directory, the remote Python and the transmit gain.
+
+## Notes
+
+- One simulation run takes about 4 s on BTS, 8 to 9 s on Berkeley and SINDIT, and 16 s on Synthetic on the machine above. Each target launches all of its runs at once, so its wall time is roughly the run count above times these figures, divided by the number of cores.
+- Simulations are deterministic for a given seed: the same command writes the same csv. Radio runs are not, since the channel is physical.
+- `make kill` stops every running simulation; `make clean` removes the Python caches.
