@@ -8,7 +8,7 @@ from . import common
 
 ORDER = ['reactive', 'threshold', 'hybrid', 'random', 'ucb', 'vhct', 'mpgts']
 
-PANEL_IN = (COLUMN_IN / 3 - 0.02, 1.25)   # one of three subfigures in a row
+PANEL_IN = (COLUMN_IN / 3 - 0.02, 1.25)
 
 def _sensors_axis(ax, Ks):
     ax.set_xscale('log', base=2)
@@ -24,12 +24,6 @@ def _save(fig, out_dir, name):
     return path
 
 def plot_scaling(args, out_dir=None):
-    """Scaling figure, as four PDFs the paper places with subfigures:
-    plot_scaling_reward.pdf, reward per policy against the number of sensors K
-    (M = K / 6); plot_scaling_consensus.pdf, the rounds the proposed learner
-    needs before 80% of the devices share one schedule, one box per K over the
-    seeds; plot_scaling_load.pdf, the offered load G per policy; and
-    plot_scaling_legend.pdf, the policy legend spanning all three."""
     out_dir = out_dir or os.path.join(args.figure_dir, 'simulation')
     sc = pd.read_csv(os.path.join(args.csv_dir, 'scaling.csv'))
     Ks = sorted(sc.K.unique())
@@ -50,8 +44,6 @@ def plot_scaling(args, out_dir=None):
         fig.tight_layout(pad=0.2)
         _save(fig, out_dir, 'plot_scaling_reward.pdf')
 
-        # a standard box per K over the seeds: quartiles, median, whiskers at
-        # 1.5 IQR and the seeds beyond them as points
         fig, ax = plt.subplots(figsize=PANEL_IN)
         ps = pd.read_csv(os.path.join(args.csv_dir, 'scaling_per_seed.csv'))
         ps = ps[ps.solver == 'mpgts']
@@ -68,8 +60,6 @@ def plot_scaling(args, out_dir=None):
         fig.tight_layout(pad=0.2)
         _save(fig, out_dir, 'plot_scaling_consensus.pdf')
 
-        # the offered load per policy: M = K / 6 holds the per-slot budget, so a
-        # policy that keeps its load flat in K scales its channel use with K
         fig, ax = plt.subplots(figsize=PANEL_IN)
         for solver in ORDER:
             d = sc[sc.solver == solver].sort_values('K')

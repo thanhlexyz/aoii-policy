@@ -6,9 +6,6 @@ import util
 
 from .stat_final import tail_metrics
 
-# (tau, rho) is chosen on the first CALIB fraction of the run, while every
-# policy is scored on the last 1000 slots: the choice never sees the window it
-# is reported on
 CALIB = 0.4
 
 def calib_reward(path):
@@ -16,14 +13,6 @@ def calib_reward(path):
     return df['reward'].iloc[:int(CALIB * len(df))].mean()
 
 def stat_threshold(args):
-    """One (tau, rho) for the Threshold baseline on every trace. `make
-    threshold` runs each pair of the grid on every trace and seed (tag
-    _tune_t<tau>_r<rho>); per trace, the pairs are ranked by their mean
-    calibration reward (1 = best), and the pair with the best mean rank over
-    the traces is chosen, ties broken by the mean ratio of its calibration
-    reward to the best one of each trace. Ranks are used because the rewards
-    of the traces differ by orders of magnitude. The chosen pair is the default
-    of util.py; nothing is copied."""
     rows = []
     for dataset in util.DATASETS:
         pattern = os.path.join(args.csv_dir, args.mode, f'{dataset}_threshold_tune_t*_r*_s[0-9]*.csv')

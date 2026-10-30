@@ -6,8 +6,6 @@ import util
 
 from .stat_final import tail_metrics
 
-# tag -> label, in the order the figure lists them. The empty tag is the full
-# policy from `make run`; the rest come from `make ablation`.
 VARIANTS = [('',          'full policy: TS over $(n_r, x_{\\mathrm{bg}})$'),
             ('_bgonly',   'learn $x_{\\mathrm{bg}}$ only'),
             ('_q',        'learn $q$ as well (36 schedules)'),
@@ -19,7 +17,6 @@ VARIANTS = [('',          'full policy: TS over $(n_r, x_{\\mathrm{bg}})$'),
             ('_N25',      'round $N = 25$')]
 
 def stat_ablation(args):
-    """RQ2: what each ingredient of the proposed policy buys, on its own."""
     rows = []
     for dataset in util.DATASETS:
         for tag, label in VARIANTS:

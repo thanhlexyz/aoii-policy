@@ -38,33 +38,25 @@ PARAMETER_DESCRIPTION = {
 class Normalizer:
 
     def __init__(self, args):
-        # save args
         self.args = args
 
     def run(self):
-        # extract args
         args = self.args
-        # load raw data
         path = os.path.join(args.raw_dir, args.dataset, 'raw.csv')
         df = pd.read_csv(path)
-        # get list of sensors
         station_ids   = df['station_id'].unique()
         parameter_ids = df['parameter_id'].unique()
-        # initialize global data
         index_data = {'sensor_id': [],
                       'station_id': [],
                       'parameter_id': [],
                       'n_event': [],
                       'description': []}
-        # reset data dir
         d = os.path.join(args.data_dir, args.dataset)
         os.system(f'rm -rf "{d}"')
         os.makedirs(d)
-        # loop
         sensor_id = 0
         min_timestamp = np.inf
         for station_id, parameter_id in tqdm.tqdm(it.product(station_ids, parameter_ids)):
-            # extract and save subframe
             df1 = df[(df['station_id'] == station_id) & (df['parameter_id'] == parameter_id)]
             if parameter_id in [1, 126, 153, 154, 155, 162, 163, 164, 165]:
                 df1.loc[:, 'value'] -= 999990
@@ -76,24 +68,19 @@ class Normalizer:
                 df2 = df2.dropna(subset=['value'])
                 df2['timestamp'] = pd.to_datetime(df2['timestamp'], format='mixed')
                 df2 = df2.sort_values(by='timestamp')
-                # convert timestamp to float
                 df2['timestamp'] = df2['timestamp'].apply(lambda x: x.timestamp())
                 df2.to_csv(path, index=None)
-                # add global data
                 index_data['sensor_id'].append(sensor_id)
                 index_data['station_id'].append(station_id)
                 index_data['parameter_id'].append(parameter_id)
                 index_data['n_event'].append(len(df2))
                 index_data['description'].append(PARAMETER_DESCRIPTION[parameter_id])
                 sensor_id += 1
-                # compute min timestamp
                 if df2['timestamp'].min() < min_timestamp:
                     min_timestamp = df2['timestamp'].min()
-        # save global data
         df = pd.DataFrame(index_data)
         path = os.path.join(d, 'index.csv')
         df.to_csv(path, index=None)
-        # save min timestamp
         path = os.path.join(d, 'min_timestamp.txt')
         with open(path, 'w') as fp:
             fp.write(f'{min_timestamp}')

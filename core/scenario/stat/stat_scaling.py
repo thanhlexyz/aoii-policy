@@ -7,32 +7,27 @@ import util
 
 from .stat_final import tail_metrics
 
-AGREE  = 0.8   # the share of devices on one schedule that counts as converged
-WINDOW = 5     # rounds
+AGREE  = 0.8
+WINDOW = 5
 
-def rounds_to_agree(path, round_interval):
-    """First round from which the share of devices on the modal schedule stays
-    at or above AGREE for WINDOW consecutive rounds (nan if never)."""
+def rounds_to_agree(path, round_length):
     df = pd.read_csv(path)
     if 'agree' not in df:
         return float('nan')
-    a = df['agree'].groupby(df.index // round_interval).mean().to_numpy()
+    a = df['agree'].groupby(df.index // round_length).mean().to_numpy()
     for r in range(len(a) - WINDOW + 1):
         if a[r:r + WINDOW].min() >= AGREE:
             return float(r)
     return float('nan')
 
 def stat_scaling(args):
-    """Scaling in the number of sensors K on the synthetic trace, with the IRSA
-    budget M = K / 6 held proportional: reward per policy, and how many rounds
-    the proposed learner needs before the devices agree on one schedule."""
     rows = []
     for solver in util.SOLVERS:
         for path in sorted(glob.glob(os.path.join(args.csv_dir, args.mode, f'synthetic_{solver}_scaleK*_s[0-9]*.csv'))):
             stem = os.path.basename(path)[:-4]
             K = int(stem.split('_scaleK')[1].split('_s')[0]); seed = int(stem.rsplit('_s', 1)[1])
             m = tail_metrics(path, K // 6)
-            m['rounds_to_agree'] = rounds_to_agree(path, args.round_interval)
+            m['rounds_to_agree'] = rounds_to_agree(path, args.round_length)
             rows.append({'solver': solver, 'K': K, 'seed': seed, **m})
     if not rows:
         print('[!] no scaling runs on disk'); return

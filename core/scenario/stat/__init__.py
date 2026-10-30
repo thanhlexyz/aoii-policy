@@ -4,7 +4,6 @@ from .stat_final import stat_final
 from .stat_ablation import stat_ablation
 from .stat_fixed import stat_fixed
 from .stat_robustness import stat_robustness
-from .stat_subsets import stat_subsets
-from .stat_channel import stat_channel
+from .stat_subset import stat_subset
 from .stat_scaling import stat_scaling
 from .stat_threshold import stat_threshold

@@ -8,7 +8,6 @@ import util
 N_TAIL = 1000
 
 def tail_metrics(path, n_irsa_slot):
-    """Steady-state figures of merit, over the last N_TAIL slots of one run."""
     df   = pd.read_csv(path)
     tail = df.tail(N_TAIL)
     return {'n_step'     : len(df),
@@ -19,8 +18,6 @@ def tail_metrics(path, n_irsa_slot):
             'reward'     : tail['reward'].mean()}
 
 def stat_final(args):
-    """One row per (dataset, solver), aggregated over every seed on disk. This
-    is the table every results claim in the paper quotes."""
     rows = []
     for dataset in util.DATASETS:
         for solver in util.SOLVERS:
@@ -35,7 +32,6 @@ def stat_final(args):
     df   = pd.DataFrame(rows)
     path = os.path.join(args.csv_dir, 'summary_per_seed.csv')
     df.to_csv(path, index=None, float_format='%.6f')
-    # mean and spread over seeds
     agg = (df.groupby(['dataset', 'solver'], sort=False)
              .agg(n_seed=('seed', 'count'), n_step=('n_step', 'max'),
                   avg_aoii=('avg_aoii', 'mean'), avg_aoii_std=('avg_aoii', 'std'),
@@ -66,15 +62,9 @@ def fmt_aoii(m, sd):
     if m >= 1:   return f'${m:.1f} \\pm {sd:.1f}$'
     return fmt(m, sd, 3) if m >= 0.01 else fmt(m, sd, 4)
 
-ALPHA = 0.01   # significance level of every test the paper reports
+ALPHA = 0.01
 
 def signed_rank_p(d, a, b, metric):
-    """Two-sided p-value of the Wilcoxon signed-rank test between policies
-    `a` and `b` on `metric`, paired by seed: every policy replays the same
-    seeds (same device population, event sequence and channel draws), so the
-    per-seed difference removes the between-seed spread the unpaired tests
-    pay for. Exact distribution (scipy chooses it for n <= 50 without ties);
-    nan when fewer than two paired seeds or every difference is zero."""
     from scipy import stats
     x = d[d.solver == a].set_index('seed')[metric]
     y = d[d.solver == b].set_index('seed')[metric]
@@ -89,14 +79,9 @@ def seeds_in_words(df):
     words = {5: 'five', 10: 'ten', 15: 'fifteen', 20: 'twenty'}
     return words.get(hi, str(hi)) if lo == hi else f'{lo} to {hi}'
 
-# downlink signaling per device per round, as quantized in Sec. II: the learned
-# supplements receive the round-average AoII (16-bit fixed point) and the
-# decoded-packet count (7 bits) of their device; the proposed policy receives
-# the index of its next schedule; every other policy receives nothing
 SUPPLEMENT_BITS = 16 + 7
 
 def signaling(args):
-    """(bits per device per round, form) of every policy."""
     import math
     from simulator.solver.mpgts.learner import grids
     ts_bits = math.ceil(math.log2(int(np.prod([len(g) for g in grids(args)]))))
@@ -106,15 +91,6 @@ def signaling(args):
             'mpgts': (ts_bits, 'broadcast')}
 
 def main_table(agg, df, args):
-    """Writes <figure_dir>/tab-main.tex, the one table RQ1 rests on, across
-    both columns: steady-state AoII per policy (rows) and trace (columns),
-    the policies sorted from worst to best by their mean AoII rank over the
-    traces, the best AoII per trace in bold, then the downlink signaling each
-    policy needs per device per round and its form; the last row gives the
-    AoII reduction of the proposed policy against the best baseline on each
-    trace, starred at level ALPHA under the Wilcoxon signed-rank test paired
-    by seed. The sort order, the signaling and the reduction are explained in
-    the text; the caption only defines the notation."""
     datasets = [d for d in util.DATASETS if d in set(agg.dataset)]
     aoii = agg.pivot(index='solver', columns='dataset', values='avg_aoii')
     std  = agg.pivot(index='solver', columns='dataset', values='avg_aoii_std')
@@ -131,8 +107,6 @@ def main_table(agg, df, args):
             cells.append(cell)
         bits, form = sig[solver]
         rows.append(f'      {LABEL[solver]} & ' + ' & '.join(cells) + f' & {bits} & {form}' + r' \\')
-    # the AoII reduction against the best baseline of each trace, starred when
-    # the signed-rank test against that one pre-specified baseline is below ALPHA
     if 'mpgts' in aoii.index:
         cuts = []
         for dataset in datasets:
@@ -144,12 +118,10 @@ def main_table(agg, df, args):
             cuts.append(f'{cut:.0f}\\%{star}')
         rows.append(r'      \midrule')
         rows.append(r'      \textit{AoII reduction} & ' + ' & '.join(cuts) + r' & & \\')
-        # the per-packet ACK reference the RQ1 text quotes: one bit per
-        # delivered packet at the load of the proposed policy
         m = agg[agg.solver == 'mpgts']
-        ack = m.utilization * args.n_irsa_slot / args.n_device * m.p_success
+        ack = m.utilization * args.n_irsa_slot / args.n_sensor * m.p_success
         print(f'[i] per-packet ACK at the load of the proposed policy: '
-              f'{ack.min():.3f}-{ack.max():.3f} bit per device per slot')
+              f'{ack.min():.3f}-{ack.max():.3f} bit per sensor per slot')
     n = len(datasets)
     tex = r"""\newcommand{\maintable}{%
   \begin{table*}[t]
@@ -157,11 +129,11 @@ def main_table(agg, df, args):
     \caption{Steady-state AoII, mean $\pm$ standard deviation over """ + seeds_in_words(df) + r""" seeds; bold: lowest per trace; $*$: $p < """ + f'{ALPHA:g}' + r"""$ against the best baseline (Wilcoxon signed-rank test paired by seed).}
     \label{tab:main}
     \footnotesize
-    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l""" + 'r' * n + r"""rl@{}}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l""" + 'r' * n + r"""cc@{}}
       \toprule
-      & \multicolumn{""" + f'{n}' + r"""}{c}{\textbf{Steady-state AoII}} & \multicolumn{2}{c}{\textbf{Downlink signaling}} \\
+      & \multicolumn{""" + f'{n}' + r"""}{c}{\textbf{Steady-state AoII}} & \multicolumn{2}{c}{\textbf{\shortstack{Downlink signaling\\per sensor and round}}} \\
       \cmidrule(lr){2-""" + f'{n + 1}' + r"""} \cmidrule(l){""" + f'{n + 2}-{n + 3}' + r"""}
-      \textbf{Policy} & """ + ' & '.join(rf'\texttt{{{NAME[d]}}}' for d in datasets) + r""" & bit/round & form \\
+      \textbf{Policy} & """ + ' & '.join(rf'\texttt{{{NAME[d]}}}' for d in datasets) + r""" & bits & form \\
       \midrule
 """ + '\n'.join(rows) + r"""
       \bottomrule
@@ -176,15 +148,6 @@ def main_table(agg, df, args):
 
 
 def signed_rank(df, args):
-    """Wilcoxon signed-rank test paired by seed, the proposed policy against
-    every other policy, on the per-seed steady-state aoii and reward.
-    `best_baseline` marks the baseline with the best mean of that metric, the
-    one pre-specified comparison RQ1 quotes at level ALPHA; `bonferroni`
-    is the level for the other, exploratory comparisons of one trace. With
-    ten seeds the exact two-sided p cannot fall below 2 / 2^10 = 0.002, so
-    the Bonferroni level 0.01 / 6 is unreachable; that column is kept for
-    larger seed counts. This is what any 'indistinguishable' or 'better'
-    claim in the paper has to point at."""
     rows = []
     for dataset in util.DATASETS:
         d = df[df.dataset == dataset]

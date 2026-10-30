@@ -6,9 +6,6 @@ import util
 
 from .stat_final import tail_metrics
 
-# tag -> label, in the order the figure lists them. Every policy is replayed
-# under each variation (five seeds); the sensor subsets
-# and the protocol checks (causal scaling, frozen learners) join the list.
 CONFIGS = [('', 'reference'), ('_causal', 'causal scaling'), ('_frozen', 'frozen at 40\\%'),
            ('_eps0.005', r'$\epsilon = 0.005$'), ('_eps0.02', r'$\epsilon = 0.02$'),
            ('_alpha0.5', r'$\alpha = 0.5$'), ('_alpha2', r'$\alpha = 2$'),
@@ -26,9 +23,6 @@ def load_config(args, dataset, tag):
     return pd.DataFrame(rows)
 
 def summarize(df):
-    """What each robustness claim rests on: the proposed policy's reward
-    against the best baseline's (gain > 0 means it is best), its rank, and
-    how far the local-record policies exceed its AoII (collapse factor)."""
     g = df.groupby('solver').mean(numeric_only=True)
     if PROPOSED not in g.index or len(g) < 2:
         return None
@@ -44,7 +38,6 @@ def summarize(df):
             'mpgts_aoii': g.loc[PROPOSED, 'avg_aoii'], 'mpgts_load': g.loc[PROPOSED, 'utilization']}
 
 def stat_robustness(args):
-    """RQ3: the proposed policy under every variation of the protocol."""
     rows = []
     for dataset in util.DATASETS:
         for tag, label in CONFIGS:
@@ -55,7 +48,7 @@ def stat_robustness(args):
             df = load_config(args, dataset, f'_o{offset}')
             s = summarize(df) if len(df) else None
             if s: rows.append({'dataset': dataset, 'tag': f'_o{offset}',
-                               'config': f'streams {offset}--{offset + args.n_device - 1}', **s})
+                               'config': f'streams {offset}--{offset + args.n_sensor - 1}', **s})
     if not rows:
         print('[!] no robustness runs on disk'); return
     out = pd.DataFrame(rows)

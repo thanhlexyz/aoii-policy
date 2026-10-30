@@ -3,23 +3,19 @@ import torch
 
 from ..base import BaseSolver
 
-class Solver(BaseSolver):
+class ReactiveSolver(BaseSolver):
 
     def __init__(self, args):
         super().__init__(args)
-        self.X_hat_hat = self.env.X.clone()
+        self.local_estimate = self.env.source_value.clone()
 
     def select_action(self, observation):
-        # extract args
         args = self.args
         env  = self.env
-        # get random action from uniform sending probability
-        action = torch.abs(env.X - self.X_hat_hat) > args.error_threshold
+        action = torch.abs(env.source_value - self.local_estimate) > args.error_tolerance
         return action
 
     def update(self):
-        # extract args
         env    = self.env
-        active = env.active
-        # update sensor estimate of server
-        self.X_hat_hat[active] = env.X[active]
+        transmitting = env.transmitting
+        self.local_estimate[transmitting] = env.source_value[transmitting]

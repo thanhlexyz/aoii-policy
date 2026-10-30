@@ -6,11 +6,7 @@ import util
 
 from .stat_final import tail_metrics
 
-def stat_subsets(args):
-    """Robustness across sensor populations: the same policies replayed on
-    three disjoint 30-stream subsets of each trace (offset in the stream
-    index). Reports the per-subset ranking, which is what the robustness
-    claims rest on."""
+def stat_subset(args):
     rows = []
     for dataset in util.DATASETS:
         for path in sorted(glob.glob(os.path.join(args.csv_dir, args.mode, f'{dataset}_*_o[0-9]*_s[0-9]*.csv'))):

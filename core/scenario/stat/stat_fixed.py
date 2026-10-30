@@ -7,13 +7,6 @@ import util
 from .stat_final import tail_metrics
 
 def stat_fixed(args):
-    """RQ2: how much a schedule fixed in advance costs on the other traces.
-    `make fixed` runs every candidate schedule of the proposed policy fixed for
-    the whole run (the learner off), on every trace and seed. Per trace, the
-    hindsight-best schedule is the one with the best mean reward; `ratio` is
-    the reward of a schedule over that best reward (both negative, so 1 is the
-    best and larger is worse). The proposed policy, which is told neither the
-    trace nor the schedule, is placed on the same scale from summary.csv."""
     rows = []
     for dataset in util.DATASETS:
         pattern = os.path.join(args.csv_dir, args.mode, f'{dataset}_mpgts_fix_n*_bg*_s[0-9]*.csv')
@@ -43,7 +36,6 @@ def stat_fixed(args):
         b = a.loc[a.reward.idxmax()]
         row = {'dataset': dataset, 'best_n_r': int(b.n_r), 'best_bg': b.bg, 'best_reward': b.reward,
                'best_aoii': b.avg_aoii, 'best_load': b.load}
-        # cost of carrying the schedule that is best here to every other trace
         for other in util.DATASETS:
             o = agg[(agg.dataset == other) & (agg.n_r == b.n_r) & (agg.bg == b.bg)]
             row[f'ratio_on_{other}'] = o.ratio.iloc[0] if len(o) else float('nan')
@@ -54,7 +46,6 @@ def stat_fixed(args):
     path_best = os.path.join(args.csv_dir, 'fixed_best.csv')
     pd.DataFrame(out).to_csv(path_best, index=None, float_format='%.6f')
 
-    # the single schedule with the smallest worst-case ratio over the traces
     worst = agg.groupby(['n_r', 'bg']).ratio.agg(['max', 'idxmax']).reset_index()
     worst['worst_dataset'] = agg.loc[worst['idxmax'], 'dataset'].values
     worst = worst.drop(columns='idxmax').rename(columns={'max': 'worst_ratio'}).sort_values('worst_ratio')

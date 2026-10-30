@@ -7,12 +7,9 @@ import os
 class Monitor:
 
     def __init__(self, args):
-        # save
         self.args = args
-        # initialize progress bar
         if not args.no_progress_bar:
-            self.bar = tqdm.tqdm(range(args.n_test_episode * args.n_step))
-        # initialize writer
+            self.bar = tqdm.tqdm(range(args.n_test_episode * args.horizon))
         self.csv_data = {}
         self.global_step = 0
 
@@ -25,11 +22,9 @@ class Monitor:
             self.bar.display()
 
     def step(self, info):
-        # update progress bar
         self.__update_time()
         self.__update_description(**info)
         self.__display()
-        # log to csv
         self.__update_csv(info)
         self.global_step += 1
 
@@ -41,18 +36,13 @@ class Monitor:
                 self.csv_data[key].append(float(info[key]))
 
     def export_csv(self):
-        # extract args
         args = self.args
         directory = os.path.join(args.csv_dir, args.mode)
         os.makedirs(directory, exist_ok=True)
-        # save data to csv
         path = os.path.join(args.csv_dir, args.mode, f'{self.label}.csv')
         df = pd.DataFrame(self.csv_data)
         df.to_csv(path, index=None)
 
-    ####################################################################################
-    # MODIFY HERE
-    ####################################################################################
     @property
     def label(self):
         args = self.args
@@ -66,6 +56,3 @@ class Monitor:
                     _kwargs[key] = f'{kwargs[key]:0.3f}'
         if not self.args.no_progress_bar:
             self.bar.set_postfix(**_kwargs)
-    ####################################################################################
-    # END
-    ####################################################################################
