@@ -1,11 +1,16 @@
-# python
 **/__pycache__
 *.pyc
 
-# inputs, results and figures (see README.md for how to rebuild them)
-data/
+data/*
+!data/csv/
+data/csv/*
+!data/csv/*.csv
+data/csv/channel.csv
+data/csv/ota_calib_ota.csv
+!data/csv/stat/
+data/csv/stat/*
+!data/csv/stat/*.csv
 
-# editors
 .vscode/
 .idea/
 *.swp

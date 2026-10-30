@@ -48,10 +48,9 @@ The code names are the names under which the results are stored, and they differ
 ├── lean              Lean 4 proofs of Theorem 1
 ├── test              tests that the code reproduces the paper
 ├── doc               Figs. 1 and 2 of the paper
-└── data              inputs, results and figures, not in git
-    ├── data          raw and normalized traces
-    ├── csv           one csv per run in test/ and the summaries
-    └── figure        Table I and the simulation figures
+└── data
+    └── csv           summaries of the paper's results
+        └── stat          slot intervals of the traces
 ```
 
 `CLAUDE.md` holds the code style, the glossary from the paper notation to the code names, and the frozen names of the stored results.
@@ -99,6 +98,7 @@ The Threshold parameters $(\tau, \rho)$ are chosen once by `make threshold` on t
 | Fig. 4, RQ3 scaling | `make scaling` | 280 | `scaling.csv`, `scaling_per_seed.csv` |
 | Theorem 1 | `make proof` | | the axioms of every theorem |
 
+The summaries in `data/csv/` are committed, so `make figures` regenerates Figs. 3 and 4 without rerunning any simulation.
 `make results` regenerates every summary, Table I and Figs. 3 and 4 from the runs on disk.
 `make paper` copies Table I and the figures into `../../paper/figure/` once `make test` passes.
 `make all` runs `run` and `results`.

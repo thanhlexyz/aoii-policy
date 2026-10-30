@@ -49,6 +49,8 @@ The results of the paper are final. These names are how they are stored, so they
 
 No test or refactor writes into `data/` or `../paper/`, and no new experiment is run.
 
+The summary csvs in `data/csv/` and `data/csv/stat/` are committed and are the paper's results; `make test` regenerates them and must match them byte for byte. The run files in `data/csv/test/`, the traces in `data/data/` and the figures in `data/figure/` are not committed, nor are the radio summaries `channel.csv` and `ota_calib_ota.csv`.
+
 ## Radio code
 
 The paper does not use the over-the-air experiments for now, so the radio code (`sdr/`, `pysdr/`, the radio calibration, the Fig. 6 plot and channel statistic, `requirement-pi.txt` and the radio make targets) is kept in `../resource/radio/` with its original layout and is not part of this code. Its run files stay in `data/csv/test` with the `_ota` tag. Bringing it back means moving those files into `core/` and restoring the `--channel` and `--ota_*` arguments.
