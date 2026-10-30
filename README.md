@@ -1,6 +1,6 @@
-# MPGTS: AoII Minimization over Feedback-Free IoT Uplinks
+# An AoII Minimization Policy for IoT Sensor Traffic
 
-Code of the paper *An AoII Minimization Policy for IoT Sensor Traffic*.
+Code of the paper of the same title.
 
 Remote IoT sensors transmit status updates over a grant-free irregular repetition slotted ALOHA (IRSA) uplink without per-packet acknowledgements, and the server keeps an estimate of every sensor.
 The age of incorrect information (AoII) measures how long and how far each estimate is wrong.
