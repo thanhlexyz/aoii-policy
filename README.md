@@ -102,20 +102,3 @@ The summaries in `data/csv/` are committed, so `make figures` regenerates Figs. 
 `make results` regenerates every summary, Table I and Figs. 3 and 4 from the runs on disk.
 `make paper` copies Table I and the figures into `../../paper/figure/` once `make test` passes.
 `make all` runs `run` and `results`.
-
-## Tests
-
-```bash
-make test
-```
-
-The tests rerun 20 paper configurations and compare each run file byte for byte with `data/csv/test`.
-They regenerate every summary and Table I from the runs on disk and compare them with `data/csv` and the paper.
-They regenerate the figures and compare their text with the copies in the paper.
-They write only to temporary folders and take about 2.5 minutes.
-
-## Notes
-
-- One simulation run takes about 4 s on `BTS`, 8 to 9 s on `Berkeley` and `SINDIT`, and 16 s on `Synthetic` on the machine above, so the wall time of a target is roughly its run count times these figures divided by the number of cores.
-- Simulations are deterministic for a given seed, and the same command writes the same csv.
-- `make kill` stops every running simulation, and `make clean` removes the Python caches.
